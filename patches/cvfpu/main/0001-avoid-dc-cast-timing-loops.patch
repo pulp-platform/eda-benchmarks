@@ -1,0 +1,70 @@
+diff --git a/src/fpnew_cast_multi.sv b/src/fpnew_cast_multi.sv
+index eb0571b..0c3457e 100644
+--- a/src/fpnew_cast_multi.sv
++++ b/src/fpnew_cast_multi.sv
+@@ -537,6 +537,15 @@ module fpnew_cast_multi #(
+   logic [MAX_INT_WIDTH-1:0]  final_int;        // integer shifted in position
+ 
+   logic [$clog2(INT_MAN_WIDTH+1)-1:0] denorm_shamt; // shift amount for denormalization
++  logic [$clog2(INT_MAN_WIDTH+1)-1:0] denorm_shamt_fp;
++  logic [$clog2(INT_MAN_WIDTH+1)-1:0] denorm_shamt_int;
++  logic [$clog2(INT_MAN_WIDTH+1)-1:0] denorm_shamt_fp_denorm;
++  logic [$clog2(INT_MAN_WIDTH+1)-1:0] denorm_shamt_fp_sticky;
++
++  assign denorm_shamt_fp        = SUPER_MAN_BITS - fpnew_pkg::man_bits(dst_fmt_q2);
++  assign denorm_shamt_int       = unsigned'(MAX_INT_WIDTH - 1 - input_exp_q);
++  assign denorm_shamt_fp_denorm = unsigned'(denorm_shamt_fp + 1 - destination_exp_q);
++  assign denorm_shamt_fp_sticky = SUPER_MAN_BITS + 2;
+ 
+   logic [1:0] fp_round_sticky_bits, int_round_sticky_bits, round_sticky_bits;
+   logic       of_before_round, uf_before_round;
+@@ -547,7 +556,7 @@ module fpnew_cast_multi #(
+     // Default assignment
+     final_exp       = unsigned'(destination_exp_q); // take exponent as is, only look at lower bits
+     preshift_mant   = '0;  // initialize mantissa container with zeroes
+-    denorm_shamt    = SUPER_MAN_BITS - fpnew_pkg::man_bits(dst_fmt_q2); // right of mantissa
++    denorm_shamt    = denorm_shamt_fp; // right of mantissa
+     of_before_round = 1'b0;
+     uf_before_round = 1'b0;
+ 
+@@ -557,7 +566,7 @@ module fpnew_cast_multi #(
+     // Handle INT casts
+     if (dst_is_int_q) begin
+       // By default right shift mantissa to be an integer
+-      denorm_shamt = unsigned'(MAX_INT_WIDTH - 1 - input_exp_q);
++      denorm_shamt = denorm_shamt_int;
+       // overflow: when converting to unsigned the range is larger by one
+       if (input_exp_q >= signed'(fpnew_pkg::int_width(int_fmt_q2) - 1 + op_mod_q2)) begin
+         denorm_shamt    = '0; // prevent shifting
+@@ -579,12 +588,12 @@ module fpnew_cast_multi #(
+       end else if (destination_exp_q < 1 &&
+                    destination_exp_q >= -signed'(fpnew_pkg::man_bits(dst_fmt_q2))) begin
+         final_exp       = '0; // denormal result
+-        denorm_shamt    = unsigned'(denorm_shamt + 1 - destination_exp_q); // adjust right shifting
++        denorm_shamt    = denorm_shamt_fp_denorm; // adjust right shifting
+         uf_before_round = 1'b1;
+       // Limit the shift to retain sticky bits
+       end else if (destination_exp_q < -signed'(fpnew_pkg::man_bits(dst_fmt_q2))) begin
+         final_exp       = '0; // denormal result
+-        denorm_shamt    = unsigned'(denorm_shamt + 2 + fpnew_pkg::man_bits(dst_fmt_q2)); // to sticky
++        denorm_shamt    = denorm_shamt_fp_sticky; // to sticky
+         uf_before_round = 1'b1;
+       end
+     end
+@@ -955,9 +964,13 @@ module fpnew_cast_multi #(
+       always_comb begin : detect_overflow
+         ifmt_of_after_round[ifmt] = 1'b0;
+         // Int result can overflow if we're at the max exponent
+-        if (!rounded_sign && input_exp_q2 == signed'(INT_WIDTH - 2 + op_mod_q3)) begin
+-          // Check whether the rounded MSB differs from unrounded MSB
+-          ifmt_of_after_round[ifmt] = ~rounded_int_res[INT_WIDTH-2+op_mod_q3];
++        if (!rounded_sign) begin
++          if (op_mod_q3 && input_exp_q2 == signed'(INT_WIDTH - 1)) begin
++            ifmt_of_after_round[ifmt] = ~rounded_int_res[INT_WIDTH-1];
++          end else if (!op_mod_q3 && input_exp_q2 == signed'(INT_WIDTH - 2)) begin
++            // Check whether the rounded MSB differs from unrounded MSB
++            ifmt_of_after_round[ifmt] = ~rounded_int_res[INT_WIDTH-2];
++          end
+         end
+       end
+     end else begin : inactive_format

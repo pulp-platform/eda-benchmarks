@@ -1,0 +1,12 @@
+diff --git a/util/clustergen/cluster.py b/util/clustergen/cluster.py
+--- a/util/clustergen/cluster.py
++++ b/util/clustergen/cluster.py
+@@ -38,7 +38,7 @@ def extend_with_default(validator_class):
+     )
+ 
+ 
+-DefaultValidator = extend_with_default(validators.Draft202012Validator)
++DefaultValidator = extend_with_default(getattr(validators, 'Draft202012Validator', validators.Draft7Validator))
+ 
+ 
+ class Generator(object):

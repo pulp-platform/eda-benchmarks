@@ -1,0 +1,31 @@
+diff --git a/Bender.yml b/Bender.yml
+--- a/Bender.yml
++++ b/Bender.yml
+@@ -62,7 +62,13 @@ sources:
+       - hw/snitch/src/riscv_instr.sv
+       # Level 1
+       - hw/snitch/src/snitch_pkg.sv
+-      # Level 2
+-      - hw/snitch/src/snitch_regfile_ff.sv
++  - target: not(snitch_regfile_latch)
++    files:
++      - hw/snitch/src/snitch_regfile_ff.sv
++  - target: snitch_regfile_latch
++    files:
++      - hw/snitch/src/snitch_regfile_latch.sv
++  - files:
++      # Level 2
+       - hw/snitch/src/snitch_lsu.sv
+       - hw/snitch/src/snitch_l0_tlb.sv
+diff --git a/hw/snitch/src/snitch_regfile_latch.sv b/hw/snitch/src/snitch_regfile_latch.sv
+--- a/hw/snitch/src/snitch_regfile_latch.sv
++++ b/hw/snitch/src/snitch_regfile_latch.sv
+@@ -1,6 +1,8 @@
+ // Copyright 2020 ETH Zurich and University of Bologna.
+ // Solderpad Hardware License, Version 0.51, see LICENSE for details.
+ // SPDX-License-Identifier: SHL-0.51
+ 
++`include "common_cells/registers.svh"
++
+ // Author: Florian Zaruba <zarubaf@iis.ee.ethz.ch>
+ // Description: Variable Register File

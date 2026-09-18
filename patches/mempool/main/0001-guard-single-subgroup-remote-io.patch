@@ -1,0 +1,24 @@
+diff --git a/hardware/src/mempool_sub_group.sv b/hardware/src/mempool_sub_group.sv
+--- a/hardware/src/mempool_sub_group.sv
++++ b/hardware/src/mempool_sub_group.sv
+@@ -136,12 +136,14 @@ module mempool_sub_group
+   logic           [NumTilesPerSubGroup-1:0] tcdm_dma_resp_ready;
+ 
+   // Connect the IOs to the tiles' signals
+-  assign tcdm_sg_master_resp[NumSubGroupsPerGroup-1:1]         = tcdm_sg_master_resp_i[NumSubGroupsPerGroup-1:1];
+-  assign tcdm_sg_master_resp_valid[NumSubGroupsPerGroup-1:1]   = tcdm_sg_master_resp_valid_i[NumSubGroupsPerGroup-1:1];
+-  assign tcdm_sg_master_resp_ready_o[NumSubGroupsPerGroup-1:1] = tcdm_sg_master_resp_ready[NumSubGroupsPerGroup-1:1];
+-  assign tcdm_sg_slave_req[NumSubGroupsPerGroup-1:1]           = tcdm_sg_slave_req_i[NumSubGroupsPerGroup-1:1];
+-  assign tcdm_sg_slave_req_valid[NumSubGroupsPerGroup-1:1]     = tcdm_sg_slave_req_valid_i[NumSubGroupsPerGroup-1:1];
+-  assign tcdm_sg_slave_req_ready_o[NumSubGroupsPerGroup-1:1]   = tcdm_sg_slave_req_ready[NumSubGroupsPerGroup-1:1];
++  if (NumSubGroupsPerGroup > 1) begin : gen_remote_sg_io_assigns
++    assign tcdm_sg_master_resp[NumSubGroupsPerGroup-1:1]         = tcdm_sg_master_resp_i[NumSubGroupsPerGroup-1:1];
++    assign tcdm_sg_master_resp_valid[NumSubGroupsPerGroup-1:1]   = tcdm_sg_master_resp_valid_i[NumSubGroupsPerGroup-1:1];
++    assign tcdm_sg_master_resp_ready_o[NumSubGroupsPerGroup-1:1] = tcdm_sg_master_resp_ready[NumSubGroupsPerGroup-1:1];
++    assign tcdm_sg_slave_req[NumSubGroupsPerGroup-1:1]           = tcdm_sg_slave_req_i[NumSubGroupsPerGroup-1:1];
++    assign tcdm_sg_slave_req_valid[NumSubGroupsPerGroup-1:1]     = tcdm_sg_slave_req_valid_i[NumSubGroupsPerGroup-1:1];
++    assign tcdm_sg_slave_req_ready_o[NumSubGroupsPerGroup-1:1]   = tcdm_sg_slave_req_ready[NumSubGroupsPerGroup-1:1];
++  end
+ 
+   // AXI interfaces
+   axi_tile_req_t  [NumTilesPerSubGroup-1:0] axi_tile_req;

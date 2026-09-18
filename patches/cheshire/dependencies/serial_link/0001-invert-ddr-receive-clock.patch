@@ -1,0 +1,21 @@
+diff --git a/src/slink_phys_layer.sv b/src/slink_phys_layer.sv
+index c6fc6bb..2150844 100644
+--- a/src/slink_phys_layer.sv
++++ b/src/slink_phys_layer.sv
+@@ -158,8 +158,15 @@ module slink_phys_layer_rx #(
+   ////////////////
+   //   DDR IN   //
+   ////////////////
+   if (EnDdr) begin : gen_ddr_mode
+-      always_ff @(negedge ddr_rcv_clk_i, negedge rst_ni) begin
++      logic ddr_rcv_clk_n;
++      (* dont_touch = "true" *)
++      tc_clk_inverter i_ddr_rcv_clk_inverter (
++        .clk_i ( ddr_rcv_clk_i ),
++        .clk_o ( ddr_rcv_clk_n )
++      );
++
++      always_ff @(posedge ddr_rcv_clk_n, negedge rst_ni) begin
+         if (!rst_ni) begin
+           ddr_q <= 0;
+         end else begin

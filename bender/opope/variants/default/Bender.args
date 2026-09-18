@@ -1,0 +1,6 @@
+-p
+oseda_bench_opope
+-t
+synthesis
+-D
+TARGET_OPOPE_HWPE

@@ -1,0 +1,7 @@
+package:
+  name: oseda_bench_spatz
+  authors:
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  spatz: { path: "main" }

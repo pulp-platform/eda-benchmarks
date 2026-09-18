@@ -1,0 +1,10 @@
+package:
+  name: oseda_bench_spatz
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  spatz: { path: "main" }
+
+sources: []

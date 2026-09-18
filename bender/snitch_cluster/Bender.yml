@@ -1,0 +1,7 @@
+package:
+  name: oseda_bench_snitch_cluster
+  authors:
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  snitch_cluster: { path: "main" }

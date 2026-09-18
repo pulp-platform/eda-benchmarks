@@ -1,0 +1,28 @@
+--- a/hardware/src/mempool_tile.sv
++++ b/hardware/src/mempool_tile.sv
+@@ -5,6 +5,9 @@
+ `include "mempool/mempool.svh"
+ 
+ /* verilator lint_off DECLFILENAME */
++`ifdef OSEDA_MEMPOOL_GROUP_ONLY
++(* blackbox *)
++`endif
+ module mempool_tile
+   import mempool_pkg::*;
+   import cf_math_pkg::idx_width;
+@@ -54,6 +57,8 @@
+   // Wake up interface
+   input  logic              [NumCoresPerTile-1:0]                                 wake_up_i
+ );
++
++`ifndef OSEDA_MEMPOOL_GROUP_ONLY
+ 
+   /****************
+    *   Includes   *
+@@ -1162,4 +1167,6 @@
+   if (DataWidth > AxiDataWidth)
+     $error("AxiDataWidth needs to be larger than DataWidth!");
+ 
++`endif
++
+ endmodule : mempool_tile

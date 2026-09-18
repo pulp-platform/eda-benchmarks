@@ -1,0 +1,55 @@
+diff --git a/core/cva6.sv b/core/cva6.sv
+--- a/core/cva6.sv
++++ b/core/cva6.sv
+@@ -350,6 +350,10 @@ module cva6
+     input noc_resp_t noc_resp_i
+ );
+ 
++  // Keep the standalone synthesis benchmark reset vector independent of the
++  // external boot address input, which is not a reset-safe constant signal.
++  localparam logic [CVA6Cfg.VLEN-1:0] OSEDA_BOOT_ADDR = 64'h0000_0000_8000_0000;
++
+   localparam type interrupts_t = struct packed {
+     logic [CVA6Cfg.XLEN-1:0] S_SW;
+     logic [CVA6Cfg.XLEN-1:0] VS_SW;
+@@ -1189,7 +1194,7 @@ module cva6
+       .halt_csr_o              (halt_csr_ctrl),
+       .commit_instr_i          (commit_instr_id_commit[0]),
+       .commit_ack_i            (commit_ack),
+-      .boot_addr_i             (boot_addr_i[CVA6Cfg.VLEN-1:0]),
++      .boot_addr_i             (OSEDA_BOOT_ADDR),
+       .hart_id_i               (hart_id_i[CVA6Cfg.XLEN-1:0]),
+       .ex_i                    (ex_commit),
+       .csr_op_i                (csr_op_commit_csr),
+@@ -1356,7 +1361,7 @@ module cva6
+       .halt_frontend_o       (halt_frontend),
+       .halt_o                (halt_ctrl),
+       // control ports
+-      .boot_addr_i           (boot_addr_i[CVA6Cfg.VLEN-1:0]),
++      .boot_addr_i           (OSEDA_BOOT_ADDR),
+       .pc_commit_i           (pc_commit),
+       .eret_i                (eret),
+       .ex_valid_i            (ex_commit.valid),
+diff --git a/core/controller.sv b/core/controller.sv
+--- a/core/controller.sv
++++ b/core/controller.sv
+@@ -127,6 +127,10 @@ module controller import ariane_pkg::*; #(
+   assign cache_init_d[2:1] = cache_init_q[1:0];
+   assign cache_init_no     = |cache_init_q;
+ 
++  // Keep the asynchronous reset load constant in this module so sequential
++  // mapping does not depend on cross-hierarchy constant propagation.
++  localparam logic [CVA6Cfg.VLEN-1:0] OSEDA_BOOT_ADDR = 64'h0000_0000_8000_0000;
++
+   // address to fetch from after coming out of (uarch) reset
+   logic [CVA6Cfg.VLEN-1:0] rst_addr_d, rst_addr_q;
+   assign rst_addr_o = rst_addr_q;
+@@ -432,7 +436,7 @@ module controller import ariane_pkg::*; #(
+       fence_active_q   <= 1'b0;
+       fence_i_active_q <= 1'b0;
+       flush_dcache_o   <= 1'b0;
+-      rst_addr_q       <= boot_addr_i;
++      rst_addr_q       <= OSEDA_BOOT_ADDR;
+       time_irq_q       <= 1'b0;
+       priv_lvl_q       <= riscv::PRIV_LVL_M;
+       cache_init_q     <= '0;

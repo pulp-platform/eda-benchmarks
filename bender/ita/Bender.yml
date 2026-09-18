@@ -1,0 +1,9 @@
+package:
+  name: oseda_bench_ita
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  common_cells: { git: "https://github.com/pulp-platform/common_cells.git", version: 1.37.0 }
+  tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.13 }

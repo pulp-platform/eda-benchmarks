@@ -1,0 +1,15 @@
+package:
+  name: oseda_bench_spi_host
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  opentitan_peripherals: { path: "main" }
+
+sources:
+  - target: synthesis
+    include_dirs:
+      - ../../dependencies/register_interface/include
+    files:
+      - spi_host_synth.sv

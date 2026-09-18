@@ -1,0 +1,50 @@
+--- a/rtl/opope_ctrl.sv
++++ b/rtl/opope_ctrl.sv
+@@ -353,7 +353,7 @@
+         cntrl_streamer_o.custom_priority[1] = YsourceStreamId;
+         cntrl_streamer_o.custom_priority[2] = XsourceStreamId;
+       end
+-      PRIORITY_YZ  :begin
++      default      :begin // PRIORITY_YZ, including recovery from invalid encodings
+         cntrl_streamer_o.custom_priority[0] = YsourceStreamId;
+         cntrl_streamer_o.custom_priority[1] = XsourceStreamId;
+         cntrl_streamer_o.custom_priority[2] = WsourceStreamId;
+@@ -538,16 +538,28 @@
+           prefetched_d        = (y_write_row_index_q == Height - 1 && y_write_reg_index_q == REG_PER_CE - 2) ?  1'b1 : prefetched_q;
+           shift_acc           = |y_write_row_index_q;
+         end
+-        if (prefetched_q == 1'b1 && acc_state_current == ACC_Y_READ_ENGINE_RUNNING && acc_state_next == ACC_Z_RELOAD_Y_ENGINE) prefetched_d = 1'b0; // Reloaded value completed
+-        y_ready_o        = ~(prefetched_d ) &~ prefetched_q; //~acc_change_state;
+-        in_ready_o       = ~ compute_q;
+-        external_loading = ~(prefetched_q );
+-        ce_enable        = in_valid_i &~ compute_q;
+-        if (ce_enable) begin // This has to happen after the prefetched y is loaded
+-          inner_loop_counter_d = (inner_loop_counter_q == (cntrl_engine_o.inner_loop_count - 1)) ? 'b0 : inner_loop_counter_q + 1;
+-          compute_d = inner_loop_counter_q == (cntrl_engine_o.inner_loop_count - 1 );
+-        end
+-        acc_change_state = (prefetched_d | prefetched_q) & (compute_d | compute_q);
++        if (prefetched_q) begin
++          if (acc_state_current == ACC_Y_READ_ENGINE_RUNNING &&
++              acc_state_next == ACC_Z_RELOAD_Y_ENGINE)
++            prefetched_d = 1'b0; // Reloaded value completed
++          in_ready_o = ~compute_q;
++          ce_enable = in_valid_i & ~compute_q;
++          if (ce_enable) begin
++            inner_loop_counter_d = (inner_loop_counter_q == (cntrl_engine_o.inner_loop_count - 1)) ? 'b0 : inner_loop_counter_q + 1;
++            compute_d = inner_loop_counter_q == (cntrl_engine_o.inner_loop_count - 1);
++          end
++          acc_change_state = compute_q | compute_d;
++        end else begin
++          y_ready_o = ~prefetched_d;
++          in_ready_o = ~compute_q;
++          external_loading = 1'b1;
++          ce_enable = in_valid_i & ~compute_q;
++          if (ce_enable) begin
++            inner_loop_counter_d = (inner_loop_counter_q == (cntrl_engine_o.inner_loop_count - 1)) ? 'b0 : inner_loop_counter_q + 1;
++            compute_d = inner_loop_counter_q == (cntrl_engine_o.inner_loop_count - 1);
++          end
++          acc_change_state = prefetched_d & (compute_d | compute_q);
++        end
+       end
+     // -------------------------------------------------------------------------------------------------------------------------------------
+       ACC_ENGINE_RUNNING: begin

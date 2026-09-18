@@ -1,0 +1,14 @@
+package:
+  name: oseda_bench_cva6
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  cva6: { path: "main" }
+
+sources:
+  - target: synthesis
+    files:
+      - main/core/include/aes_pkg.sv
+      - main/core/aes.sv

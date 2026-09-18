@@ -1,0 +1,8 @@
+-p
+cheshire
+-t
+rtl
+-t
+synthesis
+-t
+cv64a6_imafdc_sv39

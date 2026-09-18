@@ -1,0 +1,8 @@
+-p
+redmule
+-p
+oseda_bench_redmule
+-e
+axi
+-t
+synthesis

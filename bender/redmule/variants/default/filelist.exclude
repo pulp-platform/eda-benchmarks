@@ -1,0 +1,3 @@
+# The reference synthesis-benchmarks filelist intentionally omits this unused
+# top-level unit. Including it makes newer Slang versions elaborate it and fail.
+fpnew/src/fpnew_top.sv

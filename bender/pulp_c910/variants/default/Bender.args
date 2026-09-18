@@ -1,0 +1,6 @@
+-p
+pulp-c910
+-p
+oseda_bench_pulp_c910
+-t
+synthesis

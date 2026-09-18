@@ -1,0 +1,14 @@
+package:
+  name: oseda_bench_ara
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  ara: { path: "main" }
+
+sources:
+  include_dirs:
+    - ../../dependencies/axi/include
+  files:
+    - ara_synth.sv

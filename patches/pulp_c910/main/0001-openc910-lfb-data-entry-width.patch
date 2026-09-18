@@ -1,0 +1,16 @@
+diff --git a/vendor/thead_openc910/C910_RTL_FACTORY/gen_rtl/lsu/rtl/ct_lsu_ctrl.v b/vendor/thead_openc910/C910_RTL_FACTORY/gen_rtl/lsu/rtl/ct_lsu_ctrl.v
+--- a/vendor/thead_openc910/C910_RTL_FACTORY/gen_rtl/lsu/rtl/ct_lsu_ctrl.v
++++ b/vendor/thead_openc910/C910_RTL_FACTORY/gen_rtl/lsu/rtl/ct_lsu_ctrl.v
+@@ -280,8 +280,8 @@ input   [5  :0]  lsu_had_ctcq_entry_cmplt;
+ input   [5  :0]  lsu_had_ctcq_entry_vld;           
+ input   [2  :0]  lsu_had_icc_state;                
+ input   [7  :0]  lsu_had_lfb_addr_entry_dcache_hit; 
+ input   [7  :0]  lsu_had_lfb_addr_entry_rcl_done;  
+ input   [7  :0]  lsu_had_lfb_addr_entry_vld;       
+-input   [1  :0]  lsu_had_lfb_data_entry_last;      
+-input   [1  :0]  lsu_had_lfb_data_entry_vld;       
++input   [LFB_DATA_ENTRY-1 :0]  lsu_had_lfb_data_entry_last;      
++input   [LFB_DATA_ENTRY-1 :0]  lsu_had_lfb_data_entry_vld;       
+ input            lsu_had_lfb_lf_sm_vld;            
+ input   [12 :0]  lsu_had_lfb_wakeup_queue;         
+ input   [2  :0]  lsu_had_lm_state;                 

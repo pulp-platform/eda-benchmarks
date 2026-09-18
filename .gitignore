@@ -1,0 +1,10 @@
+**/.bender
+bender/*/dependencies/
+bender/*/main
+bender/*/variants/*/Bender.lock
+bender/*/variants/*/main
+bender/snitch_cluster/variants/*/snitch_cluster_wrapper_pkg.sv
+benchmarks/
+bender/bin/
+.venv/
+__pycache__/

@@ -1,0 +1,7 @@
+package:
+  name: oseda_bench_cva6
+  authors:
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  cva6: { path: "main" }

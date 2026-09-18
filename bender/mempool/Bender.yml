@@ -1,0 +1,7 @@
+package:
+  name: oseda_bench_mempool
+  authors:
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  mempool: { path: "main" }

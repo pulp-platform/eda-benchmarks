@@ -1,0 +1,16 @@
+package:
+  name: oseda_bench_serial_link
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  serial_link: { path: "main" }
+
+sources:
+  - target: synthesis
+    include_dirs:
+      - ../../dependencies/axi/include
+      - ../../dependencies/apb/include
+    files:
+      - serial_link_synth.sv

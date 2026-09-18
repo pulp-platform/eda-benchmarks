@@ -1,0 +1,3 @@
+main/hw/reqrsp_interface/src/reqrsp_intf.sv
+main/hw/mem_interface/src/mem_interface.sv
+main/hw/tcdm_interface/src/tcdm_interface.sv

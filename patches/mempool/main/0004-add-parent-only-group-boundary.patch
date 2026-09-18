@@ -1,0 +1,28 @@
+diff --git a/hardware/src/mempool_group.sv b/hardware/src/mempool_group.sv
+--- a/hardware/src/mempool_group.sv
++++ b/hardware/src/mempool_group.sv
+@@ -6,6 +6,9 @@
+ `include "reqrsp_interface/typedef.svh"
+ `include "common_cells/registers.svh"
+ 
++`ifdef OSEDA_MEMPOOL_PARENT_ONLY
++(* blackbox *)
++`endif
+ module mempool_group
+   import mempool_pkg::*;
+   import cf_math_pkg::idx_width;
+@@ -86,6 +89,7 @@ module mempool_group
+   input  `STRUCT_VECT(axi_tile_resp_t,    [NumAXIMastersPerGroup-1:0])           axi_mst_resp_i
+ );
+ 
++`ifndef OSEDA_MEMPOOL_PARENT_ONLY
+   /*****************
+    *  Definitions  *
+    *****************/
+@@ -1161,4 +1165,6 @@ module mempool_group
+     end
+   `endif
+ 
++`endif
++
+ endmodule: mempool_group

@@ -1,0 +1,48 @@
+[submodule "designs/cvfpu"]
+	path = deps/cvfpu
+	url = https://github.com/pulp-platform/cvfpu.git
+[submodule "designs/ibex"]
+	path = deps/ibex
+	url = https://github.com/lowRISC/ibex.git
+[submodule "designs/mempool"]
+	path = deps/mempool
+	url = https://github.com/pulp-platform/mempool.git
+[submodule "designs/snitch_cluster"]
+	path = deps/snitch_cluster
+	url = https://github.com/pulp-platform/snitch_cluster.git
+[submodule "deps/ara"]
+	path = deps/ara
+	url = https://github.com/pulp-platform/ara.git
+[submodule "deps/cheshire"]
+	path = deps/cheshire
+	url = https://github.com/pulp-platform/cheshire.git
+[submodule "deps/cv32e40p"]
+	path = deps/cv32e40p
+	url = https://github.com/pulp-platform/cv32e40p.git
+[submodule "deps/cva6"]
+	path = deps/cva6
+	url = https://github.com/pulp-platform/cva6.git
+[submodule "deps/ita"]
+	path = deps/ita
+	url = https://github.com/pulp-platform/ITA.git
+[submodule "deps/nvdla_hw"]
+	path = deps/nvdla_hw
+	url = https://github.com/nvdla/hw.git
+[submodule "deps/opentitan_peripherals"]
+	path = deps/opentitan_peripherals
+	url = https://github.com/pulp-platform/opentitan_peripherals.git
+[submodule "deps/opope"]
+	path = deps/opope
+	url = https://github.com/pulp-platform/opope.git
+[submodule "deps/pulp_c910"]
+	path = deps/pulp_c910
+	url = https://github.com/pulp-platform/pulp-c910.git
+[submodule "deps/redmule"]
+	path = deps/redmule
+	url = https://github.com/pulp-platform/redmule.git
+[submodule "deps/serial_link"]
+	path = deps/serial_link
+	url = https://github.com/pulp-platform/serial_link.git
+[submodule "deps/spatz"]
+	path = deps/spatz
+	url = https://github.com/pulp-platform/spatz.git

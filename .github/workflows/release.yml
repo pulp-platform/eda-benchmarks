@@ -1,0 +1,80 @@
+name: Release benchmarks
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ github.ref_name }}
+      PYTHON: /usr/bin/python3
+      JAVA: /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          # setup.sh initializes only the required pinned submodules.
+          submodules: false
+
+      - name: Validate version tag
+        run: |
+          if [[ ! $VERSION =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            printf 'Expected a release tag such as v1.0.0, got: %s\n' "$VERSION" >&2
+            exit 1
+          fi
+
+      - name: Install build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bash build-essential ca-certificates coreutils curl findutils \
+            gawk git libxml-simple-perl openjdk-17-jre-headless perl \
+            python3 python3-venv sed tar xz-utils
+
+      - name: Generate all benchmarks
+        run: ./setup.sh
+
+      - name: Package release
+        run: |
+          printf '%s\n' "$VERSION" > benchmarks/VERSION
+          git rev-parse HEAD > benchmarks/SOURCE_COMMIT
+          printf '%s\n' "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" > benchmarks/SOURCE_URL
+          package="pulp-benchmarks-${VERSION}"
+          mv benchmarks "$package"
+          archive="${package}.tar.gz"
+          tar --sort=name --owner=0 --group=0 --numeric-owner \
+            -czf "$archive" "$package"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          archive="pulp-benchmarks-${VERSION}.tar.gz"
+          if draft=$(gh release view "$VERSION" --json isDraft --jq '.isDraft' 2>/dev/null); then
+            if [[ $draft != true ]]; then
+              printf 'Release %s is already published.\n' "$VERSION" >&2
+              exit 1
+            fi
+          else
+            gh release create "$VERSION" --draft --verify-tag \
+              --title "$VERSION" --generate-notes
+          fi
+          gh release upload "$VERSION" "$archive" --clobber
+          gh release edit "$VERSION" --draft=false

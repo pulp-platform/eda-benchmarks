@@ -1,0 +1,23 @@
+PULP BENCHMARK SUITE LICENSE NOTICE
+
+Repository-authored scripts, Bender manifests, and documentation are licensed
+under the Apache License, Version 2.0; see LICENSE.Apache-2.0, unless another
+license is explicitly identified.
+
+The generated benchmark package is an aggregation of independently developed
+hardware designs and supporting source code. No single license applies to that
+package as a whole.
+
+Each source tree remains subject to its original license terms. The applicable
+license and notice files are preserved alongside the corresponding sources in
+each design's main/ and dependencies/ directories. Individual source files may
+also carry SPDX license identifiers or copyright notices; those identifiers and
+notices govern those files.
+
+Benchmark wrapper files carrying the SPDX identifier Apache-2.0 are licensed
+under the Apache License, Version 2.0; see LICENSE.Apache-2.0. Support files
+carrying SHL-0.51 are licensed under the Solderpad Hardware License, Version
+0.51; see LICENSE.SHL-0.51.
+
+Nothing in this package changes, replaces, or broadens the license granted by
+any upstream project or contributor.

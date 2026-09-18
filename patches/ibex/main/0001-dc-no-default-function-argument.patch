@@ -1,0 +1,12 @@
+diff --git a/rtl/ibex_compressed_decoder.sv b/rtl/ibex_compressed_decoder.sv
+--- a/rtl/ibex_compressed_decoder.sv
++++ b/rtl/ibex_compressed_decoder.sv
+@@ -108,7 +108,7 @@ module ibex_compressed_decoder #(
+ 
+   function automatic logic [31:0] cm_sp_addi(input logic [3:0] rlist,
+                                              input logic [1:0] spimm,
+-                                             input logic decr = 1'b0);
++                                             input logic decr);
+     logic [11:0] imm;
+     logic signed [11:0] imm_signed;
+     logic [31:0] instr;

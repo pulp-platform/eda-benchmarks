@@ -1,0 +1,21 @@
+package:
+  name: pulp_benchmark_cvfpu_fp32_fma
+  authors:
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+sources:
+  - target: synthesis
+    include_dirs:
+      - "../../dependencies/common_cells/include"
+    defines:
+      SYNTHESIS: "true"
+      COMMON_CELLS_ASSERTS_OFF: "true"
+    files:
+      - "../../dependencies/common_cells/src/cf_math_pkg.sv"
+      - "../../dependencies/common_cells/src/lzc.sv"
+      - "main/src/fpnew_pkg.sv"
+      - "main/src/fpnew_classifier.sv"
+      - "main/src/lfsr_sr.sv"
+      - "main/src/fpnew_rounding.sv"
+      - "main/src/fpnew_fma.sv"
+      - "cvfpu_fp32_fma_synth.sv"

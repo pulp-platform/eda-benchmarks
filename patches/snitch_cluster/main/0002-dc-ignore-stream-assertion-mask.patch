@@ -1,0 +1,43 @@
+diff --git a/hw/snitch_cluster/src/snitch_tcdm_fc_interconnect.sv b/hw/snitch_cluster/src/snitch_tcdm_fc_interconnect.sv
+--- a/hw/snitch_cluster/src/snitch_tcdm_fc_interconnect.sv
++++ b/hw/snitch_cluster/src/snitch_tcdm_fc_interconnect.sv
+@@ -75,11 +75,13 @@ module snitch_tcdm_fc_interconnect
+   typedef logic [UserWidth-1:0] user_t;
+   `MEM_TYPEDEF_REQ_CHAN_T(mem_req_chan_t, addr_t, data_t, strb_t, user_t);
+ 
++  `ifndef SYNTHESIS
+   // Do not assert unconditional stability on write data inside interconnects,
+   // as write data may freely change on (non-atomic) reads. We properly assert
+   // conditional write data stability below.
+   localparam mem_req_chan_t MemReqAsrtMask =
+       '{data: '0, strb: '0, amo: snitch_pkg::amo_op_e'('1), default: '1};
++  `endif
+ 
+   // Width of the bank select signal.
+   localparam int unsigned SelWidth = cc_pkg::idx_width(NumOut);
+@@ -155,8 +157,10 @@ module snitch_tcdm_fc_interconnect
+       .OutSpillReg ( 1'b0      ),
+       .ExtPrio     ( 1'b0      ),
+       .AxiVldRdy   ( 1'b1      ),
+-      .LockIn      ( 1'b1      ),
+-      .AxiVldMask  ( MemReqAsrtMask )
++      .LockIn      ( 1'b1      )
++      `ifndef SYNTHESIS
++      , .AxiVldMask  ( MemReqAsrtMask )
++      `endif
+     ) i_stream_xbar (
+       .clk_i,
+       .rst_ni,
+@@ -235,8 +239,10 @@ module snitch_tcdm_fc_interconnect
+         .SpillReg    ( 1'b0 ),
+         .AxiVldRdy   ( 1'b1 ),
+         .LockIn      ( 1'b1 ),
+-        .Radix       ( Radix ),
+-        .AxiVldMask  ( MemReqAsrtMask )
++        .Radix       ( Radix )
++        `ifndef SYNTHESIS
++        , .AxiVldMask  ( MemReqAsrtMask )
++        `endif
+       ) i_stream_omega_net (
+         .clk_i,
+         .rst_ni,

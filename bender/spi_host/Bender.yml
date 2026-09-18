@@ -1,0 +1,7 @@
+package:
+  name: oseda_bench_spi_host
+  authors:
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  opentitan_peripherals: { path: "main" }

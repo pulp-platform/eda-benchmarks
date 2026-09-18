@@ -1,0 +1,10 @@
+-p
+spatz
+-t
+rtl
+-t
+synthesis
+-t
+spatz
+-D
+TARGET_SPATZ

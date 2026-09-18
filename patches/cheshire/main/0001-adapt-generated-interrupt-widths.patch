@@ -1,0 +1,36 @@
+diff --git a/hw/cheshire_soc.sv b/hw/cheshire_soc.sv
+--- a/hw/cheshire_soc.sv
++++ b/hw/cheshire_soc.sv
+@@ -152,6 +152,14 @@ module cheshire_soc #(
+   // Interrupt requests to all interruptible harts
+   cheshire_xeip_t [NumIrqHarts-1:0] xeip;
+   logic           [NumIrqHarts-1:0] mtip, msip;
++  logic [rv_plic_reg_pkg::NumTarget-1:0] plic_irq;
++  logic [1:0] clint_timer_irq, clint_ipi;
++
++  // The checked-in peripheral RTL is generated for one PLIC target and two
++  // CLINT harts. Adapt those fixed ports to Cheshire's default one-hart view.
++  assign xeip[0] = '{s: 1'b0, m: plic_irq[0]};
++  assign mtip = clint_timer_irq[NumIrqHarts-1:0];
++  assign msip = clint_ipi[NumIrqHarts-1:0];
+ 
+   // Interrupt 0 is hardwired to zero by convention.
+   // Other internal interrupts are synchronous (for now) and need not be synced;
+@@ -1133,7 +1141,7 @@ module cheshire_soc #(
+     .reg_req_i  ( reg_out_req[RegOut.plic] ),
+     .reg_rsp_o  ( reg_out_rsp[RegOut.plic] ),
+     .intr_src_i ( intr_routed[IntrRtdPlic][rv_plic_reg_pkg::NumSrc-1:0] ),
+-    .irq_o      ( xeip ),
++    .irq_o      ( plic_irq ),
+     .irq_id_o   ( ),
+     .msip_o     ( )
+   );
+@@ -1152,6 +1160,6 @@ module cheshire_soc #(
+     .reg_req_i    ( reg_out_req[RegOut.clint] ),
+     .reg_rsp_o    ( reg_out_rsp[RegOut.clint] ),
+     .rtc_i,
+-    .timer_irq_o  ( mtip ),
+-    .ipi_o        ( msip )
++    .timer_irq_o  ( clint_timer_irq ),
++    .ipi_o        ( clint_ipi )
+   );

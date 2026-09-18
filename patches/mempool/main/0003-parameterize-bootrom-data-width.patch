@@ -1,0 +1,14 @@
+diff --git a/hardware/src/mempool_system.sv b/hardware/src/mempool_system.sv
+--- a/hardware/src/mempool_system.sv
++++ b/hardware/src/mempool_system.sv
+@@ -663,7 +663,9 @@ module mempool_system
+ 
+   `FF(bootrom_rvalid, bootrom_req, 1'b0, clk_i, rst_ni)
+ 
+-  bootrom i_bootrom (
++  bootrom #(
++    .DataWidth(AxiDataWidth)
++  ) i_bootrom (
+     .clk_i  (clk_i        ),
+     .req_i  (bootrom_req  ),
+     .addr_i (bootrom_addr ),

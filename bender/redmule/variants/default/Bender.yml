@@ -1,0 +1,15 @@
+package:
+  name: oseda_bench_redmule
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  redmule: { path: "main" }
+
+sources:
+  - target: synthesis
+    include_dirs:
+      - ../../dependencies/hci/rtl/common
+    files:
+      - redmule_synth.sv

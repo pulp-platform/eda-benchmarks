@@ -1,0 +1,11 @@
+diff --git a/rtl/ibex_controller.sv b/rtl/ibex_controller.sv
+--- a/rtl/ibex_controller.sv
++++ b/rtl/ibex_controller.sv
+@@ -418,7 +418,6 @@ module ibex_controller #(
+   logic instr_fetch_err;
+ 
+ `ifndef SYNTHESIS
+-  // synopsys translate_off
+   // make sure we are called later so that we do not generate messages for
+   // glitches
+   always_ff @(negedge clk_i) begin

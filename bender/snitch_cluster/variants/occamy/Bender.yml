@@ -1,0 +1,14 @@
+package:
+  name: oseda_bench_snitch_cluster
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  snitch_cluster: { path: "main" }
+
+sources:
+  - target: synthesis
+    files:
+      - snitch_cluster_synth.sv
+      - snitch_cluster_occamy_synth.sv

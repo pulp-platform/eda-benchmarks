@@ -1,0 +1,12 @@
+-p
+oseda_bench_snitch_cluster
+-t
+synthesis
+-t
+rtl
+-t
+snitch_cluster
+-t
+snitch_cluster_wrapper
+-t
+snitch_regfile_latch

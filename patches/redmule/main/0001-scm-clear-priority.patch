@@ -1,0 +1,42 @@
+--- a/rtl/x_buffer/redmule_x_buffer_scm.sv
++++ b/rtl/x_buffer/redmule_x_buffer_scm.sv
+@@ -40,7 +40,7 @@ module redmule_x_buffer_scm
+       end else begin
+         if (clear_i) begin
+           read_addr_q[o] <= '0;
+-        end if (read_en_i && read_addr_i[$clog2(N_OUTPUTS)-1:0] == o) begin
++        end else if (read_en_i && read_addr_i[$clog2(N_OUTPUTS)-1:0] == o) begin
+           read_addr_q[o] <= read_addr_i[$clog2(N_OUTPUTS)+:$clog2(HEIGHT)];
+         end
+       end
+@@ -57,7 +57,7 @@ module redmule_x_buffer_scm
+     end else begin
+       if (clear_i) begin
+         wdata_q <= '0;
+-      end if (write_en_i) begin
++      end else if (write_en_i) begin
+         wdata_q <= wdata_i;
+       end
+     end
+--- a/rtl/x_buffer/redmule_x_pad_scm.sv
++++ b/rtl/x_buffer/redmule_x_pad_scm.sv
+@@ -51,7 +51,7 @@ module redmule_x_pad_scm
+     end else begin
+       if (clear_i) begin
+         wdata_q <= '0;
+-      end if (write_en_i) begin
++      end else if (write_en_i) begin
+         wdata_q <= wdata_i;
+       end
+     end
+--- a/rtl/z_buffer/redmule_z_buffer_scm.sv
++++ b/rtl/z_buffer/redmule_z_buffer_scm.sv
+@@ -88,7 +88,7 @@ module redmule_z_buffer_scm
+     end else begin
+       if (clear_i) begin
+         col_wdata_q <= '0;
+-      end if (col_write_en_i) begin
++      end else if (col_write_en_i) begin
+         col_wdata_q <= col_wdata_i;
+       end
+     end

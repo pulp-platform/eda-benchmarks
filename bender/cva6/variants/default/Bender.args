@@ -1,0 +1,8 @@
+-p
+cva6
+-p
+oseda_bench_cva6
+-t
+synthesis
+-t
+cv64a6_imafdc_sv39

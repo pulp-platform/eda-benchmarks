@@ -1,0 +1,13 @@
+package:
+  name: oseda_bench_cvfpu
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  FPnew: { path: "main" }
+
+sources:
+  - target: synthesis
+    files:
+      - cvfpu_full_synth.sv

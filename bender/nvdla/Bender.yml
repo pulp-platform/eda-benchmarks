@@ -1,0 +1,6 @@
+package:
+  name: oseda_bench_nvdla
+  authors:
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies: {}

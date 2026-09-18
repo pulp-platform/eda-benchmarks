@@ -1,0 +1,12 @@
+diff --git a/vmod/nvdla/nocif/NV_NVDLA_nocif.v b/vmod/nvdla/nocif/NV_NVDLA_nocif.v
+--- a/vmod/nvdla/nocif/NV_NVDLA_nocif.v
++++ b/vmod/nvdla/nocif/NV_NVDLA_nocif.v
+@@ -204,8 +204,6 @@
+   ,cvif2noc_axi_ar_arready //|< i
+   ,cvif2noc_axi_aw_awready //|< i
+   ,cvif2noc_axi_w_wready //|< i
+-  ,cvif2csb_resp_pd //|> o
+-  ,cvif2csb_resp_valid //|> o
+   ,cvif2noc_axi_ar_araddr //|> o
+   ,cvif2noc_axi_ar_arid //|> o
+   ,cvif2noc_axi_ar_arlen //|> o

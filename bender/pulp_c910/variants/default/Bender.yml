@@ -1,0 +1,15 @@
+package:
+  name: oseda_bench_pulp_c910
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  pulp-c910: { path: "main" }
+
+sources:
+  - target: synthesis
+    include_dirs:
+      - ../../dependencies/axi/include
+    files:
+      - pulp_c910_synth.sv

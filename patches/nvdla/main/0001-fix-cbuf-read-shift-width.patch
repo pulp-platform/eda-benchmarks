@@ -1,0 +1,30 @@
+diff --git a/vmod/nvdla/csc/NV_NVDLA_CSC_dl.v b/vmod/nvdla/csc/NV_NVDLA_CSC_dl.v
+--- a/vmod/nvdla/csc/NV_NVDLA_CSC_dl.v
++++ b/vmod/nvdla/csc/NV_NVDLA_CSC_dl.v
+@@ -3054,7 +3054,7 @@ assign is_dat_req_addr_minus1_wrap = (dat_req_addr_minus1 >= {data_bank, {7{1'b
+ `ifdef CBUF_NO_SUPPORT_READ_JUMPING
+ wire sc2buf_dat_rd_next1_en = 1'b0;
+ wire sc2buf_dat_rd_next1_en_w = 1'b0;
+-wire sc2buf_dat_rd_shift = {9{1'b0}};
++wire [9 -1:0] sc2buf_dat_rd_shift = {9{1'b0}};
+ `endif
+ `ifdef CBUF_SUPPORT_READ_JUMPING
+ wire [9 -1:0] sc2buf_dat_rd_shift_w;
+diff --git a/vmod/vlibs/NV_DW_lsd.v b/vmod/vlibs/NV_DW_lsd.v
+--- a/vmod/vlibs/NV_DW_lsd.v
++++ b/vmod/vlibs/NV_DW_lsd.v
+@@ -16,12 +16,12 @@ output [enc_width-1:0] enc;
+ //get the encoded output: the number of sign bits.
+ function [enc_width-1:0] DWF_lsd_enc (input [a_width-1:0] A);
+   reg [enc_width-1:0] temp_enc;
+-  reg [enc_width-1:0] i;
++  integer i;
+   reg done;
+   begin
+   done =0;
+   temp_enc = a_width-1;
+-  for (i=a_width-2; done==0; i=i-1) begin
++  for (i=a_width-2; i>=0 && done==0; i=i-1) begin
+     if (A[i+1] != A[i]) begin
+       temp_enc = a_width - i -2;
+       done =1;

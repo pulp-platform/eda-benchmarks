@@ -1,0 +1,14 @@
+--- a/vendor/thead_openc910/C910_RTL_FACTORY/gen_rtl/cpu/rtl/openC910.v
++++ b/vendor/thead_openc910/C910_RTL_FACTORY/gen_rtl/cpu/rtl/openC910.v
+@@ -1049,6 +1049,11 @@
+ //==========================================================
+ // &Instance("ct_sysio_top"); @1515
+ 
++// This single-core integration does not instantiate the common JTAG TAP.
++// Keep the external TDO driver inactive instead of exporting undriven outputs.
++assign had_pad_jtg_tdo = 1'b0;
++assign had_pad_jtg_tdo_en = 1'b0;
++
+ assign core1_cpu_no_retire = 1'b0;
+ assign core2_cpu_no_retire = 1'b0;
+ assign core3_cpu_no_retire = 1'b0;

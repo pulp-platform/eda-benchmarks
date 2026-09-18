@@ -1,0 +1,41 @@
+package:
+  name: oseda_bench_cv32e40p
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies: {}
+
+sources:
+  - target: synthesis
+    include_dirs:
+      - main/rtl/include
+    files:
+      - main/rtl/include/cv32e40p_apu_core_pkg.sv
+      - main/rtl/include/cv32e40p_fpu_pkg.sv
+      - main/rtl/include/cv32e40p_pkg.sv
+      - main/rtl/cv32e40p_alu.sv
+      - main/rtl/cv32e40p_alu_div.sv
+      - main/rtl/cv32e40p_aligner.sv
+      - main/rtl/cv32e40p_compressed_decoder.sv
+      - main/rtl/cv32e40p_controller.sv
+      - main/rtl/cv32e40p_cs_registers.sv
+      - main/rtl/cv32e40p_decoder.sv
+      - main/rtl/cv32e40p_int_controller.sv
+      - main/rtl/cv32e40p_ex_stage.sv
+      - main/rtl/cv32e40p_hwloop_regs.sv
+      - main/rtl/cv32e40p_id_stage.sv
+      - main/rtl/cv32e40p_if_stage.sv
+      - main/rtl/cv32e40p_load_store_unit.sv
+      - main/rtl/cv32e40p_mult.sv
+      - main/rtl/cv32e40p_prefetch_controller.sv
+      - main/rtl/cv32e40p_prefetch_buffer.sv
+      - main/rtl/cv32e40p_obi_interface.sv
+      - main/rtl/cv32e40p_core.sv
+      - main/rtl/cv32e40p_apu_disp.sv
+      - main/rtl/cv32e40p_fifo.sv
+      - main/rtl/cv32e40p_popcnt.sv
+      - main/rtl/cv32e40p_ff_one.sv
+      - main/rtl/cv32e40p_sleep_unit.sv
+      - main/rtl/cv32e40p_register_file_ff.sv
+      - main/bhv/cv32e40p_sim_clock_gate.sv

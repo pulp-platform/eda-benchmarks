@@ -1,0 +1,37 @@
+package:
+  name: oseda_bench_ita
+  authors:
+    - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
+    - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
+
+dependencies:
+  common_cells: { git: "https://github.com/pulp-platform/common_cells.git", version: 1.37.0 }
+  tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.13 }
+
+sources:
+  - target: synthesis
+    files:
+      - main/src/ita_package.sv
+      - main/src/ita_accumulator.sv
+      - main/src/ita_controller.sv
+      - main/src/ita_dotp.sv
+      - main/src/ita_fifo_controller.sv
+      - main/src/ita_inp1_mux.sv
+      - main/src/ita_inp2_mux.sv
+      - main/src/ita_input_sampler.sv
+      - main/src/ita_output_controller.sv
+      - main/src/ita_register_file_1w_1r_double_width_write.sv
+      - main/src/ita_register_file_1w_multi_port_read.sv
+      - main/src/ita_register_file_1w_multi_port_read_we.sv
+      - main/src/ita_requantizer.sv
+      - main/src/ita_serdiv.sv
+      - main/src/ita_softmax.sv
+      - main/src/ita_softmax_top.sv
+      - main/src/ita_sumdotp.sv
+      - main/src/ita_weight_controller.sv
+      - main/src/ita.sv
+      - main/src/ita_max_finder.sv
+      - main/src/ita_gelu.sv
+      - main/src/ita_relu.sv
+      - main/src/ita_activation.sv
+      - main/src/ita_requantization_controller.sv
