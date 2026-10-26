@@ -1,0 +1,19 @@
+--- a/target/sim/src/opope_tb.sv
++++ b/target/sim/src/opope_tb.sv
+@@ -504,7 +504,7 @@
+     $display("[TB] - cnt_wr= %-8d", cnt_wr);
+     if(errors != 0) begin
+       $display("[SAVE] - [TB] - Fail!");
+-      $error("[SAVE] - [TB] - errors=%08x", errors);
++      $fatal(1, "[SAVE] - [TB] - errors=%08x", errors);
+     end else begin
+       $display("[SAVE] - [TB] - Success!");
+       $display("[SAVE] - [TB] - errors=%08x", errors);
+@@ -518,6 +518,7 @@
+     $display("[SAVE] - ");
+     $display("[SAVE] - [Data]: Cycles: %0d | TCDM Request count: %0d | TCDM Start - Finish: %0d", periphery_end_counter - periphery_start_counter, tcdm_read_counter + tcdm_write_counter, end_tcdm_counter - start_tcdm_counter+1);
+     $display("[SAVE] - ");
++    $display("TEST PASSED");
+     $finish;
+   end
+ 

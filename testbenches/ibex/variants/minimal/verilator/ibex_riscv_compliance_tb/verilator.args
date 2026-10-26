@@ -1,0 +1,11 @@
+--cc
+--exe
+--build
+--assert
+--timescale
+1ns/1ps
+-CFLAGS
+-DTOPLEVEL_NAME=ibex_riscv_compliance
+-LDFLAGS
+-pthread -lutil -lelf
+-GRV32ZC=3

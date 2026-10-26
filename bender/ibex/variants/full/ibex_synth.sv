@@ -1,7 +1,7 @@
 // Copyright (c) 2026 ETH Zurich and University of Bologna.
 // SPDX-License-Identifier: Apache-2.0
 
-package oseda_bench_ibex_pkg;
+package pulp_benchmark_ibex_pkg;
   typedef struct packed {
     logic instr_gnt_i;
     logic instr_rvalid_i;
@@ -46,7 +46,7 @@ package oseda_bench_ibex_pkg;
 endpackage
 
 module ibex_synth
-  import oseda_bench_ibex_pkg::*;
+  import pulp_benchmark_ibex_pkg::*;
 #(
   parameter bit PMPEnable = 1'b0,
   parameter int unsigned PMPGranularity = 0,

@@ -1,0 +1,101 @@
+--- a/vendor/thead_openc910/smart_run/tests/cases/exception/ct_expt_smoke.s
++++ b/vendor/thead_openc910/smart_run/tests/cases/exception/ct_expt_smoke.s
+@@ -59,7 +59,8 @@
+   and   x9, x9, x10
+   
+   # get VPN2 in x10
+-  li    x10, \VPN
++  la    x10, \VPN
++  srli  x10, x10, 12
+   li    x11, 0x7fc0000
+   and   x10,x10,x11
+   srli  x10, x10, 18    
+@@ -80,7 +81,8 @@
+   
+   # cfig level-2 page
+   # get VPN1 in x16
+-  li    x11, \VPN
++  la    x11, \VPN
++  srli  x11, x11, 12
+   li    x13, 0x3fe00
+   and   x16, x11, x13
+   srli  x16, x16, 9  
+@@ -93,7 +95,8 @@
+   li    x11, 0x200
+   addi  x11, x11, 2
+   add   x11, x11, x9  
+-  li    x10, \VPN
++  la    x10, \VPN
++  srli  x10, x10, 12
+   srli  x10, x10, 9
+   add   x18, x11, x10
+   slli  x19, x18, 10 
+@@ -103,7 +106,8 @@
+   
+   # cfig level-3 page
+   # get VPN0 in x12
+-  li    x11, \VPN
++  la    x11, \VPN
++  srli  x11, x11, 12
+   li    x12, 0x1ff
+   and   x12, x12, x11
+   # get level-3 page addr x17
+@@ -111,7 +115,8 @@
+   slli  x12, x12, 3
+   add   x17, x18, x12
+   # write pte into level-3 page
+-  li    x11, \PPN
++  la    x11, \PPN
++  srli  x11, x11, 12
+   li    x12, \THEADFLAG
+   li    x13, \FLAG
+   slli  x11, x11, 10
+@@ -146,14 +151,12 @@
+       bnez	x10, TEST_WFI 
+       nop
+ .global MMU_CFG
+-  csrr  x9,satp
+-  li    x10,0xfffffffffffffff
+-  and   x9,x9,x10
+-  li    x10,8
+-  slli  x10,x10,60
+-  or    x9,x9,x10
+-  csrw	satp, x9
+-  MMU_PTW_4K 0x0,0x0,0xff,0xf
++  li    x9, 0x8000000000010100
++  csrw  satp, x9
++  MMU_PTW_4K SROUTINE,SROUTINE,0xef,0xf
++  MMU_PTW_4K UROUTINE,UROUTINE,0xff,0xf
++  sfence.vma
++
+ 
+       .option norvc
+       dcache.ciall
+@@ -366,8 +369,9 @@
+       li x3,0x8
+       csrrc x1,mcause,x0
+       bne x1,x3,TEST_FAIL
+-      csrrs x1, mepc,x0
+-      addi x1,x1,0x4
++      li x1,0x1800
++      csrs mstatus,x1
++      la x1,TEST_PASS
+       csrrw x0, mepc,x1
+       mret
+ .global UECALL_END
+@@ -465,6 +469,7 @@
+       li x1,0x1000
+       csrrc x0,mstatus,x1
+       mret
++.balign 4096
+ .global SROUTINE
+ SROUTINE:
+ .global SECALL_EXPT
+@@ -496,6 +501,7 @@
+       li x1,0x100
+       csrrc x3,sstatus,x1
+       sret
++.balign 4096
+ .global UROUTINE
+ UROUTINE:
+       ecall

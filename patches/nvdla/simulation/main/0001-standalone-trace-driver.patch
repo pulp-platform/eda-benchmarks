@@ -1,0 +1,113 @@
+--- a/verif/verilator/nvdla.cpp
++++ b/verif/verilator/nvdla.cpp
+@@ -19,7 +19,7 @@
+ 
+ #include "VNV_nvdla.h"
+ 
+-#include "../spec/defs/project.h"
++#include "project.h"
+ 
+ #ifndef NVDLA_MEM_ADDRESS_WIDTH
+ #define NVDLA_MEM_ADDRESS_WIDTH 64
+@@ -160,10 +160,10 @@
+ 						continue;
+ 					
+ 					printf("(%lu) syncpt %08x\n", ticks, it->first);
++					const uint32_t id = it->first;
+ 					write(intr_status_reg, it->second);
+ 					syncpts.erase(it);
+-					
+-					return it->first;
++					return id;
+ 				}
+ 			} else if ((dla->nvdla2csb_data & op.mask) != (op.data & op.mask)) {
+ 				op.reading = 0;
+@@ -176,6 +176,7 @@
+ 				}
+ 			} else
+ 				opq.pop();
++            return 0;
+ 		}
+ 		
+ 		if (!op.write && op.reading)
+@@ -452,10 +453,9 @@
+ 			
+ 			if (wtxn.wlast) {
+ 				printf("(%lu) %s: write, last tick\n", ticks, name);
+-				aw_fifo.pop();
+-
+ 				axi_b_txn btxn;
+ 				btxn.bid = awtxn.awid;
++				aw_fifo.pop();
+ 				b_fifo.push(btxn);
+ 			} else {
+ 				printf("(%lu) %s: write, ticks remaining\n", ticks, name);
+@@ -887,7 +887,7 @@
+ 		
+ 		.w_wvalid = &dla->nvdla_core2cvsram_w_wvalid,
+ 		.w_wready = &dla->nvdla_core2cvsram_w_wready,
+-		.w_wdata = dla->nvdla_core2cvsram_w_wdata,
++		.w_wdata = AXI_WDATA_MKPTR dla->nvdla_core2cvsram_w_wdata,
+ 		.w_wstrb = &dla->nvdla_core2cvsram_w_wstrb,
+ 		.w_wlast = &dla->nvdla_core2cvsram_w_wlast,
+ 		
+@@ -905,7 +905,7 @@
+ 		.r_rready = &dla->nvdla_core2cvsram_r_rready,
+ 		.r_rid = &dla->nvdla_core2cvsram_r_rid,
+ 		.r_rlast = &dla->nvdla_core2cvsram_r_rlast,
+-		.r_rdata = dla->nvdla_core2cvsram_r_rdata,
++		.r_rdata = AXI_WDATA_MKPTR dla->nvdla_core2cvsram_r_rdata,
+ 	};
+ 	AXIResponder *axi_cvsram = new AXIResponder(cvsramconn, "CVSRAM");
+ #else
+@@ -933,12 +933,15 @@
+ 	dla->nvdla_pwrbus_ram_a_pd = 0;
+ 
+ 	Verilated::commandArgs(argc, argv);
+-	if (argc != 2) {
+-		fprintf(stderr, "nvdla requires exactly one parameter (a trace file)\n");
++	const char *trace_path = nullptr;
++	for (int i = 1; i < argc; ++i) {
++		if (!strncmp(argv[i], "+TRACE=", 7)) trace_path = argv[i] + 7;
++	}
++	if (!trace_path) {
++		fprintf(stderr, "Missing +TRACE=<trace file>\n");
+ 		return 1;
+ 	}
+-	
+-	trace->load(argv[1]);
++	trace->load(trace_path);
+ 
+ 	printf("reset...\n");
+ 	dla->dla_reset_rstn = 1;
+@@ -1010,6 +1013,10 @@
+ 	uint32_t quiesc_timer = 200;
+ 	int waiting = 0;
+ 	while (!csb->done() || (quiesc_timer--)) {
++        if (ticks > 2000000) {
++            fprintf(stderr, "Simulation watchdog: tick=%lu waiting=%d interrupt=%d\n", ticks, waiting, dla->dla_intr);
++            return 3;
++        }
+ 		int extevent;
+ 		
+ 		extevent = csb->eval(waiting);
+@@ -1061,7 +1068,7 @@
+ 		return 2;
+ 	}
+ 	
+-	printf("*** PASS\n");
++	printf("TEST PASSED\n");
+ 	
+ 	return 0;
+ }
+--- a/verif/verilator/new_trace_to_verilator.py
++++ b/verif/verilator/new_trace_to_verilator.py
+@@ -118,7 +118,7 @@
+             toks = line.split()
+             
+             assert toks[1] in syncpts
+-            assert toks[2] == "1" # memory_type
++            assert toks[2] in ("1", "PRI_MEM") # memory_type
+             
+             if toks[0] == 'CHECK_NOTHING':
+                 trace.syncpt_check_nothing(syncpts[toks[1]])

@@ -1,0 +1,21 @@
+--- a/hw/ip/spi_host/dv/env/seq_lib/spi_host_speed_vseq.sv
++++ b/hw/ip/spi_host/dv/env/seq_lib/spi_host_speed_vseq.sv
+@@ -10,16 +10,10 @@
+   constraint spi_config_regs_c {
+       // configopts regs
+       foreach (spi_config_regs.cpol[i]) {
+-        spi_config_regs.cpol[i] dist {
+-          1'b0 :/ 1,
+-          1'b1 :/ 1
+-        };
++        spi_config_regs.cpol[i] inside {1'b0, 1'b1};
+       }
+       foreach (spi_config_regs.cpha[i]) {
+-        spi_config_regs.cpha[i] dist {
+-          1'b0 :/ 1,
+-          1'b1 :/ 1
+-        };
++        spi_config_regs.cpha[i] inside {1'b0, 1'b1};
+       }
+       foreach (spi_config_regs.csnlead[i]) {
+         spi_config_regs.csnlead[i] inside {[cfg.seq_cfg.host_spi_min_csn_latency :

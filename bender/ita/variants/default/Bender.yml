@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_ita
+  name: pulp_benchmark_ita
   authors:
     - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
@@ -9,7 +9,7 @@ dependencies:
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.13 }
 
 sources:
-  - target: synthesis
+  - target: any(synthesis, simulation)
     files:
       - main/src/ita_package.sv
       - main/src/ita_accumulator.sv
@@ -35,3 +35,8 @@ sources:
       - main/src/ita_relu.sv
       - main/src/ita_activation.sv
       - main/src/ita_requantization_controller.sv
+  - target: simulation
+    files:
+      - main/src/tb/rst_gen.sv
+      - main/src/tb/clk_rst_gen.sv
+      - main/src/tb/ita_tb.sv

@@ -1,0 +1,36 @@
+--- a/example_tb/core/cv32e40p_tb_subsystem.sv
++++ b/example_tb/core/cv32e40p_tb_subsystem.sv
+@@ -71,8 +71,8 @@
+ 
+   // instantiate the core
+   cv32e40p_top #(
+-      .PULP_XPULP      (PULP_XPULP),
+-      .PULP_CLUSTER    (PULP_CLUSTER),
++      .COREV_PULP      (PULP_XPULP),
++      .COREV_CLUSTER   (PULP_CLUSTER),
+       .FPU             (FPU),
+       .FPU_ADDMUL_LAT  (FPU_ADDMUL_LAT),
+       .FPU_OTHERS_LAT  (FPU_OTHERS_LAT),
+--- a/example_tb/core/tb_top.sv
++++ b/example_tb/core/tb_top.sv
+@@ -127,16 +127,15 @@
+   // check if we succeded
+   always_ff @(posedge clk, negedge rst_n) begin
+     if (tests_passed) begin
+-      $display("ALL TESTS PASSED");
++      $display("TEST PASSED");
+       $finish;
+     end
+     if (tests_failed) begin
+-      $display("TEST(S) FAILED!");
+-      $finish;
++      $fatal(1, "TEST(S) FAILED!");
+     end
+     if (exit_valid) begin
+-      if (exit_value == 0) $display("EXIT SUCCESS");
+-      else $display("EXIT FAILURE: %d", exit_value);
++      if (exit_value == 0) $display("TEST PASSED");
++      else $fatal(1, "EXIT FAILURE: %d", exit_value);
+       $finish;
+     end
+   end

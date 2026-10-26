@@ -1,0 +1,146 @@
+--- a/example_tb/core/cv32e40p_random_interrupt_generator.sv
++++ b/example_tb/core/cv32e40p_random_interrupt_generator.sv
+@@ -49,7 +49,6 @@
+ 
+   import perturbation_pkg::*;
+ 
+-`ifndef VERILATOR
+   class rand_irq_cycles;
+     rand int n;
+   endclass : rand_irq_cycles
+@@ -251,5 +250,4 @@
+     end
+   end
+ 
+-`endif
+ endmodule
+--- a/example_tb/core/mm_ram.sv
++++ b/example_tb/core/mm_ram.sv
+@@ -255,12 +255,8 @@
+           if ($value$plusargs("signature=%s", sig_file)) begin
+             sig_fd = $fopen(sig_file, "w");
+             if (sig_fd == 0) begin
+-`ifndef VERILATOR
+               errno = $ferror(sig_fd, error_str);
+               $error(error_str);
+-`else
+-              $error("can't open file");
+-`endif
+               use_sig_file = 1'b0;
+             end else begin
+               use_sig_file = 1'b1;
+@@ -349,7 +345,6 @@
+     end
+   end
+ 
+-`ifndef VERILATOR
+   // signal out of bound writes
+   out_of_bounds_write :
+   assert property
+@@ -365,7 +360,6 @@
+       || data_addr_i == 32'h2000_0010
+       || data_addr_i[31:16] == 16'h1600))
+   else $fatal("out of bounds write to %08x with %08x", data_addr_i, data_wdata_i);
+-`endif
+ 
+   logic [31:0] data_rdata_mux;
+ 
+@@ -376,14 +370,7 @@
+     if (transaction_q == T_RAM) begin
+       data_rdata_mux = core_data_rdata;
+     end else if (transaction_q == T_RND_STALL) begin
+-`ifndef VERILATOR
+       data_rdata_mux = rnd_stall_rdata;
+-`else
+-      $display(
+-          "out of bounds read from %08x\nRandom stall generator is not supported with Verilator",
+-          data_addr_i);
+-      $fatal(2);
+-`endif
+     end else if (transaction_q == T_ERR) begin
+       $display("out of bounds read from %08x", data_addr_i);
+       $fatal(2);
+@@ -399,9 +386,7 @@
+ 
+       end else begin
+         $write("%c", print_wdata[7:0]);
+-`ifndef VERILATOR
+         $fflush();
+-`endif
+       end
+     end
+   end
+@@ -688,7 +673,6 @@
+       .gnt_stall_i (rnd_stall_regs[9])
+   );
+ 
+-`ifndef VERILATOR
+   cv32e40p_random_interrupt_generator random_interrupt_generator_i (
+       .rst_ni          (rst_ni),
+       .clk_i           (clk_i),
+@@ -708,6 +692,5 @@
+       .irq_lines_i     (rnd_stall_regs[14][31:0])
+   );
+ 
+-`endif
+ 
+ endmodule  // ram
+--- a/example_tb/core/riscv_gnt_stall.sv
++++ b/example_tb/core/riscv_gnt_stall.sv
+@@ -67,14 +67,10 @@
+   // Tasks and functions
+   // -----------------------------------------------------------------------------------------------
+   task set_delay_value();
+-`ifndef VERILATOR
+     if (!en_stall_i) delay_value = 0;
+     else if (stall_mode_i == perturbation_pkg::STANDARD) delay_value = gnt_stall_i;
+     else if (stall_mode_i == perturbation_pkg::RANDOM) delay_value = $urandom_range(max_stall_i, 0);
+     else delay_value = 0;
+-`else
+-    delay_value = 0;
+-`endif
+   endtask : set_delay_value
+ 
+   // -----------------------------------------------------------------------------------------------
+@@ -98,11 +94,7 @@
+       grant_core_o <= 1'b0;
+       grant_delay_cnt <= 0;
+     end else begin
+-`ifdef VERILATOR
+-      //#1;
+-`else
+       #(100ps);
+-`endif
+ 
+       // When request is removed, remove grant
+       if (!req_core_i) begin
+--- a/example_tb/core/riscv_rvalid_stall.sv
++++ b/example_tb/core/riscv_rvalid_stall.sv
+@@ -88,7 +88,6 @@
+ // -----------------------------------------------------------------------------------------------
+ // Tasks and functions
+ // -----------------------------------------------------------------------------------------------
+-`ifndef VERILATOR
+ function logic [FIFO_DELAY_WL-1:0] get_random_delay();
+     if (!en_stall_i)
+         get_random_delay = 0;
+@@ -99,7 +98,6 @@
+     else
+         get_random_delay = 0;
+ endfunction : get_random_delay
+-`endif
+ 
+ // -----------------------------------------------------------------------------------------------
+ // Begin module code
+@@ -131,11 +129,7 @@
+         if (fifo_push) begin
+             fifo[wptr[FIFO_PTR_WL-2:0]] = {
+                 we_i,
+-`ifdef VERILATOR
+-                4'h0,
+-`else
+                 get_random_delay(),
+-`endif
+                 32'h0};
+ 
+             wptr_rdata <= wptr[FIFO_PTR_WL-2:0];

@@ -1,0 +1,123 @@
+--- a/corev_apu/tb/ariane_tb.sv
++++ b/corev_apu/tb/ariane_tb.sv
+@@ -15,9 +15,7 @@
+ 
+ 
+ import ariane_pkg::*;
+-import uvm_pkg::*;
+ 
+-`include "uvm_macros.svh"
+ `include "rvfi_types.svh"
+ 
+ `define MAIN_MEM(P) dut.i_sram.i_tc_sram.init_val[(``P``)]
+@@ -47,8 +45,6 @@
+         rvfi_probes_csr_t csr;
+         rvfi_probes_instr_t instr;
+     };
+-
+-    static uvm_cmdline_processor uvcl = uvm_cmdline_processor::get_inst();
+ 
+     localparam int unsigned CLOCK_PERIOD = 20ns;
+     // toggle with RTC period
+@@ -112,58 +108,13 @@
+             wait (exit_o[0]);
+ 
+             if ((exit_o >> 1)) begin
+-                `uvm_error( "Core Test",  $sformatf("*** FAILED *** (tohost = %0d)", (exit_o >> 1)))
++                $fatal(1, "Program failed: %0d", exit_o >> 1);
+             end else begin
+-                `uvm_info( "Core Test",  $sformatf("*** SUCCESS *** (tohost = %0d)", (exit_o >> 1)), UVM_LOW)
++                $display("TEST PASSED");
+             end
+ 
+             $finish();
+         end
+     end
+ 
+-    // for faster simulation we can directly preload the ELF
+-    // Note that we are loosing the capabilities to use risc-fesvr though
+-    initial begin
+-        automatic logic [7:0][7:0] mem_row;
+-        longint address, load_address, last_load_address, len;
+-        byte buffer[];
+-        void'(uvcl.get_arg_value("+elf_file=", binary));
+-
+-        if (binary != "") begin
+-            `uvm_info( "Core Test", $sformatf("Preloading ELF: %s", binary), UVM_LOW)
+-
+-            read_elf(binary);
+-            // wait with preloading, otherwise randomization will overwrite the existing value
+-            wait(clk_i);
+-
+-            last_load_address = 'hFFFFFFFF;
+-            // while there are more sections to process
+-            while (get_section(address, len)) begin
+-                automatic int num_words = (len+7)/8;
+-                `uvm_info( "Core Test", $sformatf("Loading Address: %x, Length: %x", address, len), UVM_NONE)
+-                buffer = new [num_words*8];
+-                read_section_sv(address, buffer);
+-                // preload memories
+-                // 64-bit
+-                for (int i = 0; i < num_words; i++) begin
+-                    mem_row = '0;
+-                    for (int j = 0; j < 8; j++) begin
+-                        mem_row[j] = buffer[i*8 + j];
+-                    end
+-                    load_address = (address[23:0] >> 3) + i;
+-                    if (load_address != last_load_address) begin
+-                        if (address[31:0] < 'h84000000) begin
+-                            `MAIN_MEM(load_address) = mem_row;
+-                        end else begin
+-                             `USER_MEM(load_address) = mem_row;
+-                        end
+-                        last_load_address = load_address;
+-                    end else begin
+-                        `uvm_info( "Debug info", $sformatf(" Address: %x Already Loaded! ELF file might have less than 64 bits granularity on segments.", load_address), UVM_NONE)
+-                    end
+-
+-                end
+-            end
+-        end
+-    end
+ endmodule
+--- a/corev_apu/tb/dpi/elfloader.cc
++++ b/corev_apu/tb/dpi/elfloader.cc
+@@ -81,7 +81,7 @@
+ 
+ 
+     std::vector<uint8_t> zeros;
+-    std::map<std::string, uint64_t> symbols;
++    symbols.clear();
+ 
+     #define LOAD_ELF(ehdr_t, phdr_t, shdr_t, sym_t) do { \
+     ehdr_t* eh = (ehdr_t*)buf; \
+@@ -108,7 +108,7 @@
+       unsigned max_len = sh[eh->e_shstrndx].sh_size - sh[i].sh_name; \
+       if ((sh[i].sh_type & SHT_GROUP) && strcmp(shstrtab + sh[i].sh_name, ".strtab") != 0 && strcmp(shstrtab + sh[i].sh_name, ".shstrtab") != 0) \
+       assert(strnlen(shstrtab + sh[i].sh_name, max_len) < max_len); \
+-      if (sh[i].sh_type & SHT_PROGBITS) continue; \
++      if (sh[i].sh_type == SHT_PROGBITS) continue; \
+       if (strcmp(shstrtab + sh[i].sh_name, ".strtab") == 0) \
+         strtabidx = i; \
+       if (strcmp(shstrtab + sh[i].sh_name, ".symtab") == 0) \
+@@ -133,3 +133,10 @@
+ 
+   munmap(buf, size);
+ }
++
++extern "C" char read_symbol(const char *name, unsigned long long *address) {
++  auto entry = symbols.find(name);
++  if (entry == symbols.end()) return 0;
++  *address = entry->second;
++  return 1;
++}
+--- a/corev_apu/tb/dpi/msim_helper.cc
++++ b/corev_apu/tb/dpi/msim_helper.cc
+@@ -20,6 +20,7 @@
+ 
+     // sanitize arguments
+     for (int i = 1; i < info.argc; i++) {
++      if (strncmp(info.argv[i], "+verilator+", 11) == 0) continue;
+       if (strcmp(info.argv[i], "+permissive") == 0) {
+         permissive_on = true;
+         // printf("Found permissive %s\n", info.argv[i]);

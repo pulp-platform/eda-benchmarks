@@ -1,0 +1,15 @@
+../../data/host/fesvr/elfloader.cc
+../../data/host/fesvr/htif.cc
+../../data/host/fesvr/memif.cc
+../../data/host/fesvr/dtm.cc
+../../data/host/fesvr/syscall.cc
+../../data/host/fesvr/device.cc
+../../data/host/fesvr/rfb.cc
+../../data/host/fesvr/context.cc
+../../data/host/fesvr/htif_pthread.cc
+../../data/host/fesvr/htif_hexwriter.cc
+../../data/host/fesvr/dummy.cc
+../../data/host/fesvr/option_parser.cc
+../../data/host/fesvr/term.cc
+../../data/host/fesvr/tsi.cc
+../../data/host/bootdata.cc

@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_spi_host
+  name: pulp_benchmark_spi_host
   authors:
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
 

@@ -3,7 +3,7 @@
 
 `include "hci_helpers.svh"
 
-package oseda_bench_redmule_pkg;
+package pulp_benchmark_redmule_pkg;
   localparam hci_package::hci_size_parameter_t HCI_SIZE_tcdm = '{
     DW:  redmule_pkg::MaxDataW,
     AW:  hci_package::DEFAULT_AW,
@@ -85,7 +85,7 @@ package oseda_bench_redmule_pkg;
 endpackage
 
 module redmule_synth
-  import oseda_bench_redmule_pkg::*;
+  import pulp_benchmark_redmule_pkg::*;
   import hwpe_ctrl_package::*;
 (
   input  logic             clk_i,

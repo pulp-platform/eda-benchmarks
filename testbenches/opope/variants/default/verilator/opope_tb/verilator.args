@@ -1,0 +1,10 @@
+--cc
+--exe
+--build
+--timing
+--assert
+--timescale
+1ns/1ps
+-CFLAGS
+-DTbName=Vopope_tb
+-GTCP=1000

@@ -1,0 +1,7 @@
+packages:
+  cvfpu_fp32_fma_verification:
+    revision: null
+    version: null
+    source:
+      Path: ../../../../../../testbenches/cvfpu/build/host/fp32_fma
+    dependencies: []

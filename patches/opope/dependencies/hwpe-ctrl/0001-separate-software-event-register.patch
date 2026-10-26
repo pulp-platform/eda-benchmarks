@@ -1,0 +1,35 @@
+--- a/rtl/hwpe_ctrl_slave.sv
++++ b/rtl/hwpe_ctrl_slave.sv
+@@ -44,6 +44,9 @@
+ 
+   output logic [LOG_CONTEXT:0] counter_pending
+ );
++
++  logic [7:0] sw_evt_q;
++  assign flags_o.sw_evt = sw_evt_q;
+ 
+   localparam int unsigned N_REGISTERS         = REGFILE_N_REGISTERS;
+   localparam int unsigned N_MANDATORY_REGS    = REGFILE_N_MANDATORY_REGS;
+@@ -413,16 +416,16 @@
+   always_ff @(posedge clk_i or negedge rst_ni)
+   begin : sw_evt_proc
+     if(rst_ni == 1'b0) begin
+-      flags_o.sw_evt <= '0;
++      sw_evt_q <= '0;
+     end
+     else if(clear_o == 1'b1) begin
+-      flags_o.sw_evt <= '0;
++      sw_evt_q <= '0;
+     end
+     else if((cfg.req == 1'b1) && (cfg.wen == 1'b0) && (cfg.add[LOG_REGS+2-1:2]) == REGFILE_MANDATORY_SWEVT) begin
+-      flags_o.sw_evt[cfg.data[3:0]] <= 1'b1;
+-    end
+-    else begin
+-      flags_o.sw_evt <= '0;
++      sw_evt_q[cfg.data[3:0]] <= 1'b1;
++    end
++    else begin
++      sw_evt_q <= '0;
+     end
+   end
+ 

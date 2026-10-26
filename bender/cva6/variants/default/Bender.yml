@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_cva6
+  name: pulp_benchmark_cva6
   authors:
     - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
@@ -8,7 +8,74 @@ dependencies:
   cva6: { path: "main" }
 
 sources:
-  - target: synthesis
+  - target: any(synthesis, simulation)
     files:
       - main/core/include/aes_pkg.sv
       - main/core/aes.sv
+  - target: simulation
+    include_dirs:
+      - main/core/include
+      - main/corev_apu/tb
+      - main/corev_apu/tb/common
+      - main/corev_apu/register_interface/include
+      - main/corev_apu/riscv-dbg/src
+      - main/verif/tb/core
+      - ../../dependencies/axi/include
+      - ../../dependencies/common_cells/include
+    files:
+      - main/corev_apu/tb/ariane_axi_pkg.sv
+      - main/corev_apu/register_interface/src/reg_intf.sv
+      - main/corev_apu/tb/ariane_soc_pkg.sv
+      - main/corev_apu/riscv-dbg/src/dm_pkg.sv
+      - main/corev_apu/tb/ariane_axi_soc_pkg.sv
+      - main/core/cva6_rvfi.sv
+      - main/corev_apu/src/ariane.sv
+      - main/corev_apu/bootrom/bootrom.sv
+      - main/corev_apu/clint/axi_lite_interface.sv
+      - main/corev_apu/clint/clint.sv
+      - main/corev_apu/fpga/src/axi2apb/src/axi2apb.sv
+      - main/corev_apu/fpga/src/axi2apb/src/axi2apb_64_32.sv
+      - main/corev_apu/fpga/src/axi2apb/src/axi2apb_wrap.sv
+      - main/corev_apu/fpga/src/apb_timer/apb_timer.sv
+      - main/corev_apu/fpga/src/apb_timer/timer.sv
+      - main/corev_apu/fpga/src/axi_slice/src/axi_ar_buffer.sv
+      - main/corev_apu/fpga/src/axi_slice/src/axi_aw_buffer.sv
+      - main/corev_apu/fpga/src/axi_slice/src/axi_b_buffer.sv
+      - main/corev_apu/fpga/src/axi_slice/src/axi_r_buffer.sv
+      - main/corev_apu/fpga/src/axi_slice/src/axi_single_slice.sv
+      - main/corev_apu/fpga/src/axi_slice/src/axi_slice.sv
+      - main/corev_apu/fpga/src/axi_slice/src/axi_slice_wrap.sv
+      - main/corev_apu/fpga/src/axi_slice/src/axi_w_buffer.sv
+      - main/corev_apu/src/axi_riscv_atomics/src/axi_res_tbl.sv
+      - main/corev_apu/src/axi_riscv_atomics/src/axi_riscv_amos.sv
+      - main/corev_apu/src/axi_riscv_atomics/src/axi_riscv_amos_alu.sv
+      - main/corev_apu/src/axi_riscv_atomics/src/axi_riscv_atomics.sv
+      - main/corev_apu/src/axi_riscv_atomics/src/axi_riscv_atomics_wrap.sv
+      - main/corev_apu/src/axi_riscv_atomics/src/axi_riscv_lrsc.sv
+      - main/corev_apu/src/axi_riscv_atomics/src/axi_riscv_lrsc_wrap.sv
+      - main/corev_apu/axi_mem_if/src/axi2mem.sv
+      - main/corev_apu/riscv-dbg/src/dm_csrs.sv
+      - main/corev_apu/riscv-dbg/src/dm_mem.sv
+      - main/corev_apu/riscv-dbg/src/dm_sba.sv
+      - main/corev_apu/riscv-dbg/src/dm_top.sv
+      - main/corev_apu/riscv-dbg/src/dmi_cdc.sv
+      - main/corev_apu/riscv-dbg/src/dmi_jtag.sv
+      - main/corev_apu/riscv-dbg/src/dmi_jtag_tap.sv
+      - main/corev_apu/rv_plic/rtl/rv_plic_target.sv
+      - main/corev_apu/rv_plic/rtl/rv_plic_gateway.sv
+      - main/corev_apu/rv_plic/rtl/plic_regmap.sv
+      - main/corev_apu/rv_plic/rtl/plic_top.sv
+      - main/corev_apu/riscv-dbg/debug_rom/debug_rom.sv
+      - main/corev_apu/register_interface/src/apb_to_reg.sv
+      - main/core/include/iti_pkg.sv
+      - main/corev_apu/tb/ariane_testharness.sv
+      - main/corev_apu/tb/ariane_peripherals.sv
+      - main/corev_apu/tb/rvfi_tracer.sv
+      - main/corev_apu/tb/common/uart.sv
+      - main/corev_apu/tb/common/SimDTM.sv
+      - main/corev_apu/tb/common/SimJTAG.sv
+      - main/core/cva6_iti/instr_to_trace.sv
+      - main/core/cva6_iti/iti.sv
+      - main/core/cva6_iti/itype_detector.sv
+      - main/corev_apu/tb/common/mock_uart.sv
+      - main/corev_apu/tb/ariane_tb.sv

@@ -13,6 +13,16 @@ if [[ -e $output || -L $output ]]; then
 fi
 
 python_command=${PYTHON:-python3}
+simulation_enabled=${SIMULATION:-1}
+[[ $simulation_enabled == 0 || $simulation_enabled == 1 ]] || {
+  printf 'SIMULATION must be 0 or 1\n' >&2
+  exit 2
+}
+keep_build_tools=${KEEP_BUILD_TOOLS:-1}
+[[ $keep_build_tools == 0 || $keep_build_tools == 1 ]] || {
+  printf 'KEEP_BUILD_TOOLS must be 0 or 1\n' >&2
+  exit 2
+}
 cleanup_enabled=0
 temporary_output=
 
@@ -65,7 +75,7 @@ copy_rtl() {
   local source=$1 destination=$2
   if [[ -n ${modified_sources[$source]:-} ]]; then
     {
-      printf '// Modified by pulp-benchmarks: benchmark compatibility changes.\n'
+      printf '// Modified by the PULP benchmark suite.\n'
       cat "$source"
     } > "$destination"
   else
@@ -148,6 +158,18 @@ map_entry() {
   if [[ $family == snitch_cluster && \
         $source == "$main_root/hw/generated/snitch_cluster_wrapper_pkg.sv" ]]; then
     destination="$variant_output/snitch_cluster_wrapper_pkg.sv"
+  elif [[ $source == "$root/testbenches/$family/data/host"/* ||
+          $source == "$root/testbenches/$family/data/host" ]]; then
+    relative=${source#"$root/testbenches/$family/data/host"}
+    destination="$output/$family/data/host$relative"
+    realpath --relative-to="$variant_output" -- "$destination"
+    return
+  elif [[ $source == "$root/testbenches/$family/variants/"*/data/* ]]; then
+    relative=${source#"$root/testbenches/$family/variants/"}
+    relative=${relative#*/data/}
+    destination="$variant_output/data/$relative"
+    realpath --relative-to="$variant_output" -- "$destination"
+    return
   elif [[ $source == "$main_root"/* ]]; then
     relative=${source#"$main_root"/}
     destination="$output/$family/main/$relative"
@@ -161,8 +183,9 @@ map_entry() {
       name=$(basename "$path")
       dependency_root=$(realpath -e -- "$path")
       if [[ $source == "$dependency_root" || $source == "$dependency_root"/* ]]; then
-        relative=${source#"$dependency_root"/}
-        destination="$output/$family/dependencies/$name/$relative"
+        relative=${source#"$dependency_root"}
+        relative=${relative#/}
+        destination="$output/$family/dependencies/$name${relative:+/$relative}"
         break
       fi
     done
@@ -175,8 +198,6 @@ map_entry() {
     printf 'Filelist entry is outside known roots: %s\n' "$source" >&2
     return 1
   }
-  # Include directories may contain non-RTL material, so copy only HDL files.
-  # Individual file-list entries are checked separately below.
   if [[ $directory == 1 ]]; then
     mkdir -p "$destination"
     while IFS= read -r -d '' path; do
@@ -185,18 +206,69 @@ map_entry() {
       mkdir -p "$(dirname "$target")"
       copy_rtl "$path" "$target"
     done < <(find "$source" -type f \
-      \( -name '*.v' -o -name '*.sv' -o -name '*.vh' -o -name '*.svh' -o -name '*.h' \) \
+      \( -name '*.v' -o -name '*.sv' -o -name '*.vh' -o -name '*.svh' -o -name '*.h' -o -name '*.hh' -o -name '*.c' -o -name '*.cc' \) \
       -print0)
   else
     case $source in
-      *.v|*.sv|*.vh|*.svh|*.h) ;;
+      *.v|*.sv|*.vh|*.svh|*.h|*.hh|*.c|*.cc|*.cpp) ;;
       *.vlib) destination=${destination%.vlib}.v ;;
-      *) printf 'Non-RTL source in filelist: %s\n' "$source" >&2; return 1 ;;
+      *) printf 'Unsupported source in filelist: %s\n' "$source" >&2; return 1 ;;
     esac
     mkdir -p "$(dirname "$destination")"
     copy_rtl "$source" "$destination"
   fi
   realpath --relative-to="$variant_output" -- "$destination"
+}
+
+append_retained_sources() {
+  local list=$1 base=$2 filelist=$3 source
+  [[ -f $list ]] || return 0
+  while IFS= read -r source || [[ -n $source ]]; do
+    [[ -n $source && $source != \#* ]] || continue
+    source=$(realpath -e -- "$base/$source")
+    if ! grep -Fxq -- "$source" "$filelist"; then
+      printf '%s\n' "$source" >> "$filelist"
+    fi
+  done < "$list"
+}
+
+export_filelist() {
+  local list=$1 mode=$2 line mapped
+  while IFS= read -r line || [[ -n $line ]]; do
+    case $line in
+      '')
+        if [[ $mode == synthesis ]]; then
+          printf '\n'
+        fi
+        ;;
+      +incdir+*)
+        mapped=$(map_entry "${line#+incdir+}" 1)
+        printf '+incdir+%s\n' "$mapped"
+        ;;
+      +*) printf '%s\n' "$line" ;;
+      *)
+        if [[ $mode == synthesis && -n ${excluded_sources[$(realpath -e -- "$line")]:-} ]]; then
+          continue
+        fi
+        map_entry "$line" 0
+        ;;
+    esac
+  done < "$list"
+}
+
+export_cpp_paths() {
+  local name=$1 directory=$2 settings list source
+  settings="$root/testbenches/$family/variants/$variant/verilator/$test_name"
+  if [[ -f $settings/$name ]]; then
+    cat "$settings/$name"
+  fi
+  list="$settings/copy_$name"
+  if [[ -f $list ]]; then
+    while IFS= read -r source || [[ -n $source ]]; do
+      [[ -n $source ]] || continue
+      map_entry "$root/bender/$family/$source" "$directory"
+    done < "$list"
+  fi
 }
 
 # Select the requested variants and record their design families.
@@ -239,9 +311,11 @@ if [[ -n ${selected_families[snitch_cluster]:-} ]]; then
     exit 1
   }
 
-  snitch_environment="$root/.venv"
+  snitch_environment="$root/bender/snitch_cluster/.venv"
   snitch_python="$snitch_environment/bin/python3"
-  "$python_command" -m venv "$snitch_environment"
+  if [[ ! -x $snitch_python ]]; then
+    "$python_command" -m venv "$snitch_environment"
+  fi
   "$snitch_python" -m pip --version >/dev/null 2>&1 || {
     printf 'Snitch generation requires pip in the Python virtual environment\n' >&2
     exit 1
@@ -267,6 +341,10 @@ git -C "$root" submodule update --init -- "${selected_repositories[@]}"
 if [[ -n ${selected_families[cva6]:-} ]]; then
   git -C "$root/deps/cva6" submodule update --init --recommend-shallow --depth 1 \
     core/cache_subsystem/hpdcache
+fi
+if [[ -n ${selected_families[mempool]:-} ]]; then
+  git -C "$root/deps/mempool" submodule update --init --recommend-shallow --depth 1 \
+    hardware/deps/dram_rtl_sim
 fi
 for path in "${selected_repositories[@]}"; do
   expected=$(git -C "$root" ls-files -s -- "$path" | awk '{print $2}')
@@ -360,6 +438,11 @@ EOF
         "$out/vmod/rams/model" >&2
       exit 1
     fi
+    if [[ $simulation_enabled == 1 ]]; then
+      mkdir -p "$out/vmod/rams/verilator"
+      cp "${ram_model_files[@]}" "$out/vmod/rams/verilator/"
+      apply_patch_directory "$nvdla" "$root/patches/nvdla/simulation/main"
+    fi
     "$python_command" "$root/patches/nvdla/stub_ram_model.py" \
       "${ram_model_files[@]}"
     find "$out/vmod/rams/model" -maxdepth 1 -type f -name '*.vcp' -delete
@@ -376,6 +459,11 @@ EOF
     apply_patch_directory \
       "$root/deps/$main_repository" \
       "$root/patches/$family/main"
+    if [[ $simulation_enabled == 1 ]]; then
+      apply_patch_directory \
+        "$root/deps/$main_repository" \
+        "$root/patches/$family/simulation/main"
+    fi
   fi
   # The manifests use stable local names. Point those names at the pinned main
   # repository and at Bender's shared family dependency checkout.
@@ -423,19 +511,40 @@ EOF
     ln -sfn "${resolved_dependency_paths[index]}" \
       "$project/dependencies/${resolved_dependencies[index]}"
   done
-  # Apply benchmark-specific compatibility patches after all dependency paths
-  # have been resolved, but before Bender generates any file lists.
-  for patch_dependency in "$root/patches/$family/dependencies"/*; do
-    [[ -d $patch_dependency ]] || continue
-    dependency=$(basename "$patch_dependency")
-    path="$project/dependencies/$dependency"
-    [[ -d $path ]] || {
-      printf 'Patched dependency was not resolved: %s/%s\n' "$family" "$dependency" >&2
-      exit 1
-    }
-    apply_patch_directory "$(realpath -e -- "$path")" "$patch_dependency"
+  # Apply normal and enabled simulation dependency patches after resolving their
+  # paths, before Bender generates source lists.
+  dependency_patch_directories=("$root/patches/$family/dependencies")
+  if [[ $simulation_enabled == 1 ]]; then
+    dependency_patch_directories+=("$root/patches/$family/simulation/dependencies")
+  fi
+  for dependency_patches in "${dependency_patch_directories[@]}"; do
+    for patch_dependency in "$dependency_patches"/*; do
+      [[ -d $patch_dependency ]] || continue
+      dependency=$(basename "$patch_dependency")
+      path="$project/dependencies/$dependency"
+      [[ -d $path ]] || {
+        printf 'Patched dependency was not resolved: %s/%s\n' "$family" "$dependency" >&2
+        exit 1
+      }
+      apply_patch_directory "$(realpath -e -- "$path")" "$patch_dependency"
+    done
   done
+
+  testbench_setup="$root/testbenches/$family/setup.sh"
+  if [[ $simulation_enabled == 1 && -f $testbench_setup ]]; then
+    KEEP_BUILD_TOOLS="$keep_build_tools" PYTHON="$python_command" BENDER="$bender" bash "$root/testbenches/setup.sh" "$family"
+    if [[ $keep_build_tools == 0 ]]; then
+      tool_directory="$root/testbenches/$family"
+      rm -rf -- "$tool_directory/downloads" "$tool_directory/.venv" \
+        "$tool_directory/tools/downloads" "$tool_directory/tools/install" "$tool_directory/tools/build"
+    fi
+  fi
 done
+
+if [[ $simulation_enabled == 1 && $keep_build_tools == 0 ]]; then
+  rm -rf -- "$root/testbenches/common/tools/install" \
+    "$root/testbenches/common/tools/build" "$root/testbenches/common/tools/downloads"
+fi
 
 # Publish the package only after every export step has succeeded.
 temporary_output=$(mktemp -d "$root/.benchmarks.XXXXXX")
@@ -443,6 +552,7 @@ output=$temporary_output
 # Build the distributable package metadata and flow files.
 cp -a "$root/flows/." "$output/"
 printf '\nTARGETS := %s\n' "${selected[*]}" >> "$output/targets.mk"
+: > "$output/testbenches.mk"
 {
   printf '%s\n' \
     '# PULP benchmarks' \
@@ -455,6 +565,15 @@ cp "$root/LICENSE" "$output/LICENSE"
 cp "$root/LICENSE.Apache-2.0" "$output/LICENSE.Apache-2.0"
 cp "$root/LICENSE.SHL-0.51" "$output/LICENSE.SHL-0.51"
 
+if [[ $simulation_enabled == 1 ]]; then
+  for family in "${!selected_families[@]}"; do
+    if [[ -d $root/testbenches/$family/data ]]; then
+      mkdir -p "$output/$family"
+      cp -aL "$root/testbenches/$family/data" "$output/$family/data"
+    fi
+  done
+fi
+
 # Generate each selected variant's independent RTL file list. Variant flow
 # files are already present because the complete flows tree was copied above.
 for target in "${selected[@]}"; do
@@ -463,6 +582,10 @@ for target in "${selected[@]}"; do
   variant=${target#*.}
   recipe="$root/bender/$family/variants/$variant"
   variant_output="$output/$family/variants/$variant"
+  if [[ $simulation_enabled == 1 && -d $root/testbenches/$family/variants/$variant/data ]]; then
+    mkdir -p "$variant_output"
+    cp -aL "$root/testbenches/$family/variants/$variant/data" "$variant_output/data"
+  fi
   [[ -f $recipe/Bender.yml ]] || {
     printf 'Missing variant recipe: %s\n' "$recipe/Bender.yml" >&2
     exit 1
@@ -520,15 +643,7 @@ for target in "${selected[@]}"; do
       "${variant_args[@]}" "${trim_args[@]}" |
       sed '/^+incdir+/d'
   } > "$raw"
-  if [[ -f $recipe/filelist.keep ]]; then
-    while IFS= read -r retained_source || [[ -n $retained_source ]]; do
-      [[ -n $retained_source && $retained_source != \#* ]] || continue
-      retained_source=$(realpath -e -- "$recipe/$retained_source")
-      if ! grep -Fxq -- "$retained_source" "$raw"; then
-        printf '%s\n' "$retained_source" >> "$raw"
-      fi
-    done < "$recipe/filelist.keep"
-  fi
+  append_retained_sources "$recipe/filelist.keep" "$recipe" "$raw"
   if [[ -n ${sram_stub_families[$family]:-} ]] && \
       ! grep -q '/tc_sram_stubs\.sv$' "$raw"; then
     printf '%s\n' "$root/support/tc_sram_stubs.sv" >> "$raw"
@@ -548,25 +663,50 @@ for target in "${selected[@]}"; do
   # Copy every resolved entry into the package and write its new relative path
   # to a file list that no longer refers to deps/, Bender, or the source repos.
   mkdir -p "$variant_output"
-  while IFS= read -r line || [[ -n $line ]]; do
-    case $line in
-      '') printf '\n' >> "$mapped_file" ;;
-      +incdir+*)
-        mapped=$(map_entry "${line#+incdir+}" 1)
-        printf '+incdir+%s\n' "$mapped" >> "$mapped_file"
-        ;;
-      +*) printf '%s\n' "$line" >> "$mapped_file" ;;
-      *)
-        if [[ -n ${excluded_sources[$(realpath -e -- "$line")]:-} ]]; then
-          continue
-        fi
-        mapped=$(map_entry "$line" 0)
-        printf '%s\n' "$mapped" >> "$mapped_file"
-        ;;
-    esac
-  done < "$raw"
+  export_filelist "$raw" synthesis > "$mapped_file"
   mv "$mapped_file" "$variant_output/filelist.f"
   rm -f "$raw"
+
+  if [[ $simulation_enabled == 1 ]]; then
+    for verilator_recipe in "$recipe"/verilator/*; do
+      [[ -d $verilator_recipe ]] || continue
+      test_name=$(basename "$verilator_recipe")
+      verilator_output="$variant_output/verilator/$test_name"
+      verilator_top=$(awk -v key="$target.$test_name.TOP" \
+        '$1 == key && $2 == ":=" { print $3 }' "$root/flows/testbenches.mk")
+      [[ $test_name =~ ^[a-zA-Z0-9_]+$ && $verilator_top =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]] || {
+        printf 'Invalid simulation test name or missing/invalid top in flows/testbenches.mk: %s/%s\n' "$target" "$test_name" >&2
+        exit 1
+      }
+      mapfile -t verilator_args < "$verilator_recipe/Bender.args"
+      raw=$(mktemp)
+      if [[ -f $verilator_recipe/Bender.yml ]]; then
+        "$bender" -d "$verilator_recipe" script flist-plus "${verilator_args[@]}" > "$raw"
+      else
+        "$bender" -d "$recipe" script flist-plus "${verilator_args[@]}" \
+          --top "$verilator_top" > "$raw"
+      fi
+      append_retained_sources "$verilator_recipe/filelist.keep" "$recipe" "$raw"
+      mkdir -p "$verilator_output"
+      printf '%s.%s.TOP := %s\n' "$target" "$test_name" "$verilator_top" \
+        >> "$output/testbenches.mk"
+      verilator_settings="$root/testbenches/$family/variants/$variant/verilator/$test_name"
+      for settings_file in verilator.args verilator.vlt run.args pkg_config.txt; do
+        if [[ -f $verilator_settings/$settings_file ]]; then
+          cp "$verilator_settings/$settings_file" "$verilator_output/$settings_file"
+        fi
+      done
+      export_filelist "$raw" verilator > "$verilator_output/filelist.f"
+      rm -f "$raw"
+      for cpp_list in cpp_include_dirs.txt cpp_files.txt; do
+        directory=0
+        [[ $cpp_list != cpp_include_dirs.txt ]] || directory=1
+        export_cpp_paths "$cpp_list" "$directory" > "$verilator_output/$cpp_list"
+        [[ -s $verilator_output/$cpp_list ]] || rm "$verilator_output/$cpp_list"
+      done
+      printf 'Exported simulation %s/%s\n' "$target" "$test_name"
+    done
+  fi
   printf 'Generated %s\n' "$target"
 done
 
@@ -615,6 +755,12 @@ for family in "${!selected_families[@]}"; do
   done
 done
 
+if [[ $simulation_enabled == 1 && $keep_build_tools == 0 ]]; then
+  for family in "${!selected_families[@]}"; do
+    rm -rf -- "$root/testbenches/$family/build"
+  done
+fi
+
 # Python helpers used during setup may leave host-version-specific bytecode.
 find "$output" -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
 find "$output" -depth -type d -name __pycache__ -exec rmdir {} +
@@ -622,3 +768,6 @@ find "$output" -depth -type d -name __pycache__ -exec rmdir {} +
 chmod 755 "$output"
 mv -T -- "$output" "$root/benchmarks"
 temporary_output=
+if [[ $keep_build_tools == 0 && -n ${selected_families[snitch_cluster]:-} ]]; then
+  rm -rf -- "$snitch_environment"
+fi

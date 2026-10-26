@@ -1,0 +1,5 @@
+main/vendor/lowrisc_ip/dv/verilator/cpp
+main/vendor/lowrisc_ip/dv/verilator/simutil_verilator/cpp
+main/examples/simple_system
+main/dv/verilator/pcount/cpp
+main/dv/cosim

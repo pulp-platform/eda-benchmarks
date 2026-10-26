@@ -1,0 +1,177 @@
+--- a/env/fpu_sb.svh
++++ b/env/fpu_sb.svh
+@@ -40,6 +40,7 @@
+ 
+     // Flush detection
+     uvm_tlm_analysis_fifo #(bit) af_flush;
++    uvm_tlm_analysis_fifo #(fpu_req_t) af_skipped;
+ 
+     fpu_req_t q_fpu_req[ logic [CVA6Cfg.TRANS_ID_BITS-1:0] ];
+ 
+@@ -50,6 +51,8 @@
+     event reset_deasserted;
+ 
+     protected int req_cnt;  // Request  counter
++    int checked_cnt;
++    int skipped_cnt;
+     int rsp_cnt; // Response counter
+     bit all_done; // Flag to signal that all requests have been executed (received corresponding responses)
+     int num_txn; // Number of transactions in a sequence
+@@ -73,6 +76,7 @@
+       af_fpu_req = new("af_fpu_req", this);
+       af_fpu_rsp = new("af_fpu_rsp", this);
+       af_flush = new("af_flush", this);
++      af_skipped = new("af_skipped", this);
+ 
+     endfunction: new
+ 
+@@ -127,6 +131,7 @@
+         fork
+           collect_fpu_req();
+           collect_fpu_resp();
++          collect_skipped();
+           flush_env();
+         join_any
+         disable fork;
+@@ -193,6 +198,7 @@
+           exp_flags  = m_ref_model.m_flags;
+ 		  	  
+           // Compare results
++          checked_cnt++;
+           if (exp_result != rsp.result) begin
+             `uvm_error("FPU_SB_ERR", $sformatf("C_RST (%0h) != FPU_RST (%0h)", exp_result , rsp.result));
+           end else if (exp_flags != rsp.exception.cause) begin
+@@ -206,7 +212,7 @@
+           // Drive all_done when every sent request has been responded to
+           // and there are no more in-flight requests pending
+           // -------------------------------------------------------
+-          if ((rsp_cnt == num_txn)) begin
++          if ((rsp_cnt + skipped_cnt == num_txn)) begin
+             all_done = 1'b1;
+             `uvm_info("FPU SB", $sformatf("all_done: cumulative rsp=%0d/%0d",
+               rsp_cnt, num_txn), UVM_HIGH)
+@@ -217,6 +223,24 @@
+       end
+     endtask: collect_fpu_resp
+ 
++    virtual task collect_skipped();
++      fpu_req_t req;
++      forever begin
++        af_skipped.get(req);
++        skipped_cnt++;
++        m_sequencer.q_inflight_tid.delete(req.data.trans_id);
++        if (rsp_cnt + skipped_cnt == num_txn) all_done = 1'b1;
++      end
++    endtask
++
++    virtual function void report_phase(uvm_phase phase);
++      super.report_phase(phase);
++      `uvm_info("FPU_SB_COVERAGE", $sformatf("checked=%0d skipped=%0d",
++                checked_cnt, skipped_cnt), UVM_LOW)
++      if (checked_cnt == 0)
++        `uvm_error("FPU_SB_EMPTY", "No vectors remained for reference checking")
++    endfunction
++
+     // ------------------------------------------
+     // API to get request counter
+     // ------------------------------------------
+--- a/env/fpu_env.svh
++++ b/env/fpu_env.svh
+@@ -83,6 +83,7 @@
+         m_fpu_agent.m_monitor.ap_fpu_req.connect(m_fpu_sb.af_fpu_req.analysis_export );
+         m_fpu_agent.m_monitor.ap_fpu_rsp.connect(m_fpu_sb.af_fpu_rsp.analysis_export );
+         m_fpu_agent.m_monitor.ap_flush.connect(m_fpu_sb.af_flush.analysis_export );
++        m_fpu_agent.m_driver.ap_skipped.connect(m_fpu_sb.af_skipped.analysis_export);
+ 
+         m_flush_driver.m_pulse_cfg = m_flush_cfg;
+         m_fpu_sb.m_sequencer = m_fpu_agent.m_sequencer;
+--- a/fpu_agent/fpu_driver.svh
++++ b/fpu_agent/fpu_driver.svh
+@@ -32,6 +32,8 @@
+     // Local variable
+     // ------------------------------------------------------------------------
+     protected string name ;
++    fpu_refmodel m_ref_model;
++    uvm_analysis_port #(fpu_req_t) ap_skipped;
+ 
+     // ------------------------------------------------------------------------
+     // Virtual interface
+@@ -45,6 +47,8 @@
+     function new(string name, uvm_component parent = null);
+         super.new(name, parent);
+         this.name = name;
++        m_ref_model = new;
++        ap_skipped = new("ap_skipped", this);
+     endfunction: new
+ 
+     // -------------------------------------------------------------------------
+@@ -130,6 +134,19 @@
+     // Send request task
+     // -------------------------------------------------------------------------
+     virtual task send_req(fpu_txn req);
++        fpu_req_t reference_req;
++        reference_req = '{
++          data: '{fu: FPU, operation: req.m_operation, operand_a: req.m_operand_a,
++                  operand_b: req.m_operand_b, imm: req.m_imm, trans_id: req.m_trans_id},
++          fmt: req.m_fmt, rm: req.m_rm, frm: req.m_frm, prec: req.m_prec};
++        m_ref_model.compute_expected(reference_req);
++        if (m_ref_model.exclude_reference_result(reference_req,
++              m_ref_model.m_expected_result, m_ref_model.m_flags)) begin
++          `uvm_info("FPU_SKIP", $sformatf("reference result=%0h flags=%0h",
++                    m_ref_model.m_expected_result, m_ref_model.m_flags), UVM_LOW)
++          ap_skipped.write(reference_req);
++          return;
++        end
+ 
+         if (req.m_delay > 0) begin
+             fpu_vif.wait_n_clocks(req.m_delay); 
+--- a/fpu_agent/fpu_agent_pkg.sv
++++ b/fpu_agent/fpu_agent_pkg.sv
+@@ -31,6 +31,7 @@
+  
+     import uvm_pkg::*;
+     import fpu_common_pkg::*;
++    import fpu_refmodel_pkg::*;
+     import ariane_pkg::*;
+     `include "uvm_macros.svh"
+ 
+--- a/ref_model_csim/rtl/fpu_refmodel.svh
++++ b/ref_model_csim/rtl/fpu_refmodel.svh
+@@ -126,6 +126,37 @@
+     
+    `uvm_info("FPU_REF_MODEL_RSP", $sformatf("RESULT=%0x(x), FLAGS= %0x", m_expected_result, m_flags), UVM_HIGH);
+   endfunction
++
++    function bit exclude_reference_result(fpu_req_t req,
++                                          logic [CVA6Cfg.FLen-1:0] result,
++                                          fpnew_pkg::status_t flags);
++      fpnew_pkg::fp_format_e fmt;
++      int unsigned mantissa_bits, exponent_bits;
++      logic [CVA6Cfg.FLen-1:0] exponent, fraction, exponent_mask, boxing_mask;
++      if (req.data.operation == FCVT_I2F) return flags.OF;
++      fmt = fpnew_pkg::fp_format_e'(req.data.operation == FCVT_F2F
++                                    ? req.data.imm[2:0] : {1'b0, req.fmt});
++      mantissa_bits = fpnew_pkg::man_bits(fmt);
++      exponent_bits = fpnew_pkg::exp_bits(fmt);
++      boxing_mask = '1;
++      boxing_mask = boxing_mask << fpnew_pkg::fp_width(fmt);
++      if (req.data.operation inside {FDIV, FSQRT})
++        return ((req.data.operand_a & boxing_mask) != boxing_mask)
++            || (req.data.operation == FDIV
++                && (req.data.operand_b & boxing_mask) != boxing_mask);
++      exponent_mask = (64'b1 << exponent_bits) - 1;
++      if (req.data.operation == FCVT_F2F) begin
++        exponent = (req.data.operand_a >> mantissa_bits) & exponent_mask;
++        fraction = req.data.operand_a & ((64'b1 << mantissa_bits) - 1);
++        return (req.data.operand_a & boxing_mask) == boxing_mask
++            && exponent == exponent_mask && fraction == 0;
++      end
++      if (req.data.operation inside {FADD, FSUB, FMUL, FMADD, FMSUB, FNMADD, FNMSUB})
++        return flags.UF && flags.NX
++            && (result & ((64'b1 << (mantissa_bits + exponent_bits)) - 1))
++               == (64'b1 << mantissa_bits);
++      return 0;
++    endfunction
+ 
+   // -----------------------------------------------------------
+   //  Compute destination environment 

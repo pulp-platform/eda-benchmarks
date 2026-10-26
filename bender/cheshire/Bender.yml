@@ -1,5 +1,5 @@
 package:
-  name: cheshire
+  name: pulp_benchmark_cheshire
   authors:
     - "Nicole Narr <narrn@student.ethz.ch>"
     - "Christopher Reinwardt <creinwar@student.ethz.ch>"

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 module snitch_cluster_occamy_synth
-  import oseda_bench_snitch_cluster_pkg::*;
+  import pulp_benchmark_snitch_cluster_pkg::*;
   import snitch_cluster_wrapper_pkg::*;
 #(
   parameter int unsigned NumClusters = 48

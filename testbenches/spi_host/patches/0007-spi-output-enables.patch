@@ -1,0 +1,61 @@
+--- a/hw/dv/sv/spi_agent/spi_if.sv
++++ b/hw/dv/sv/spi_agent/spi_if.sv
+@@ -17,7 +17,10 @@
+   bit disconnected;
+ 
+   logic [3:0] sio_out;
+-  assign sio = disconnected ? 'z : sio_out;
++  bit [3:0] sio_oe;
++  for (genvar i = 0; i < 4; i++) begin : gen_sio
++    assign sio[i] = (!disconnected && sio_oe[i]) ? sio_out[i] : 1'bz;
++  end
+ 
+   // debug signals
+   logic [7:0] host_byte;
+--- a/hw/dv/sv/spi_agent/spi_device_driver.sv
++++ b/hw/dv/sv/spi_agent/spi_device_driver.sv
+@@ -29,7 +29,7 @@
+       @(negedge cfg.vif.rst_n);
+       `uvm_info(`gfn, "\n  dev_drv: in reset progress", UVM_DEBUG)
+       under_reset = 1'b1;
+-      cfg.vif.sio_out = 'z;
++      cfg.vif.sio_oe = 0;
+       @(posedge cfg.vif.rst_n);
+       under_reset = 1'b0;
+       `uvm_info(`gfn, "\n  dev_drv: out of reset", UVM_DEBUG)
+@@ -153,21 +153,30 @@
+ 
+   virtual task send_data_to_sio(spi_mode_e mode, input logic [3:0] sio_bits);
+     case (mode)
+-      Standard: cfg.vif.sio_out[1]   <= sio_bits[0];
+-      Dual:     cfg.vif.sio_out[1:0] <= sio_bits[1:0];
+-      default:  cfg.vif.sio_out      <= sio_bits;
++      Standard: begin
++        cfg.vif.sio_out[1] <= sio_bits[0];
++        cfg.vif.sio_oe[1] <= 1'b1;
++      end
++      Dual: begin
++        cfg.vif.sio_out[1:0] <= sio_bits[1:0];
++        cfg.vif.sio_oe[1:0] <= 2'b11;
++      end
++      default: begin
++        cfg.vif.sio_out <= sio_bits;
++        cfg.vif.sio_oe <= 4'b1111;
++      end
+     endcase
+   endtask : send_data_to_sio
+ 
+   virtual task drive_bus_to_highz();
+     @(posedge cfg.vif.csb[active_csb]);
+-    cfg.vif.sio_out = 'z;
++    cfg.vif.sio_oe = 0;
+     `uvm_info(`gfn, "\n  dev_drv: drive_bus_to_highz is done", UVM_DEBUG)
+   endtask : drive_bus_to_highz
+ 
+   virtual task drive_bus_for_reset();
+     @(negedge cfg.vif.rst_n);
+-    cfg.vif.sio_out = 'z;
++    cfg.vif.sio_oe = 0;
+     `uvm_info(`gfn, "\n  dev_drv: drive_bus_for_reset is done", UVM_DEBUG)
+   endtask : drive_bus_for_reset
+ endclass : spi_device_driver

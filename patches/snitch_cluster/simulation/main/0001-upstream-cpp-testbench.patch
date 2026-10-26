@@ -1,0 +1,70 @@
+--- a/target/sim/tb/tb_bin.cc
++++ b/target/sim/tb/tb_bin.cc
+@@ -5,10 +5,23 @@
+ #include <stdio.h>
+ 
+ #include "sim.hh"
++#include "verilated.h"
+ 
+ extern std::unique_ptr<sim::Sim> s;
+ 
+ int main(int argc, char **argv, char **env) {
++    Verilated::commandArgs(argc, argv);
++    std::vector<std::string> arguments{argv[0]};
++    int expected = 0;
++    for (int i = 1; i < argc; ++i) {
++        std::string arg(argv[i]);
++        if (arg.rfind("+PRELOAD=", 0) == 0) arguments.push_back(arg.substr(9));
++        else if (arg.rfind("+EXPECTED_EXIT_CODE=", 0) == 0) expected = std::stoi(arg.substr(20));
++        else if (arg.rfind("+verilator+", 0) != 0) arguments.push_back(arg);
++    }
++    std::vector<char *> pointers;
++    for (auto &arg : arguments) pointers.push_back(arg.data());
++    argc = pointers.size(); pointers.push_back(nullptr); argv = pointers.data();
+     // Write binary path to .rtlbinary for the `make annotate` target
+     FILE *fd;
+     fd = fopen(".rtlbinary", "w");
+@@ -20,5 +33,8 @@
+     }
+ 
+     s = std::make_unique<sim::Sim>(argc, argv);
+-    return s->run();
++    int actual = s->run();
++    if (actual != expected) { fprintf(stderr, "Unexpected program exit: %d (expected %d)\n", actual, expected); return 1; }
++    puts("TEST PASSED");
++    return 0;
+ }
+--- a/target/sim/tb/verilator_lib.cc
++++ b/target/sim/tb/verilator_lib.cc
+@@ -71,15 +71,21 @@
+     if (vlt_vcd) {
+         top->trace(vcd.get(), 8);
+         vcd->open("sim.vcd");
+-        vcd->dump(TIME);
++        vcd->dump(Verilated::time());
+     }
+     TIME += 2;
+ 
+     while (!Verilated::gotFinish()) {
+         // Evaluate the DUT.
+         top->eval();
+-        if (vlt_vcd) vcd->dump(TIME);
++        if (vlt_vcd) vcd->dump(Verilated::time());
+         // Increase global time.
++        const auto next_tick = Verilated::time() + 500;
++        while (top->eventsPending() && top->nextTimeSlot() < next_tick) {
++            Verilated::timeInc(top->nextTimeSlot() - Verilated::time());
++            top->eval();
++        }
++        Verilated::timeInc(next_tick - Verilated::time());
+         TIME++;
+         // Switch to the HTIF interface in regular intervals.
+         if (TIME % HTIFTimeInterval == 0) {
+@@ -93,7 +99,5 @@
+ }  // namespace sim
+ 
+-// Verilator callback to get the current time.
+-double sc_time_stamp() { return sim::TIME * sim::TIME_CYCLES_TO_TIMESTAMP; }
+ 
+ // DPI calls.
+ void tb_memory_read(long long addr, int len, const svOpenArrayHandle data) {

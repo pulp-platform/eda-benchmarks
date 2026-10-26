@@ -5,15 +5,12 @@ package:
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
 
 sources:
-  - target: synthesis
+  - target: any(synthesis, simulation)
     include_dirs:
       - "main/rtl"
       - "main/vendor/lowrisc_ip/dv/sv/dv_utils"
       - "main/vendor/lowrisc_ip/ip/prim/rtl"
       - "main/vendor/lowrisc_ip/ip/prim_generic/rtl"
-    defines:
-      TARGET_TECH_CELLS_GENERIC_EXCLUDE_TC_SRAM: "true"
-      SYNTHESIS: "true"
     files:
       - "main/vendor/lowrisc_ip/ip/prim/rtl/prim_mubi_pkg.sv"
       - "main/vendor/lowrisc_ip/ip/prim/rtl/prim_util_pkg.sv"
@@ -59,5 +56,41 @@ sources:
       - "main/rtl/ibex_core.sv"
       - "main/rtl/ibex_lockstep.sv"
       - "main/rtl/ibex_top.sv"
-      - "ibex_synth.sv"
-      - "ibex_minimal_synth.sv"
+  - target: synthesis
+    defines:
+      TARGET_TECH_CELLS_GENERIC_EXCLUDE_TC_SRAM: "true"
+      SYNTHESIS: "true"
+    files:
+      - ibex_synth.sv
+      - ibex_minimal_synth.sv
+  - target: simulation
+    include_dirs:
+      - main/rtl
+      - main/vendor/lowrisc_ip/ip/prim/rtl
+      - main/vendor/lowrisc_ip/ip/prim_generic/rtl
+    defines:
+      RVFI: "true"
+    files:
+      - main/vendor/lowrisc_ip/ip/prim/rtl/prim_ram_1p_scr.sv
+      - main/vendor/lowrisc_ip/ip/prim_generic/rtl/prim_ram_2p_pkg.sv
+      - main/vendor/lowrisc_ip/ip/prim_generic/rtl/prim_ram_2p.sv
+      - main/rtl/ibex_tracer_pkg.sv
+      - main/rtl/ibex_tracer.sv
+      - main/rtl/ibex_top_tracing.sv
+      - main/shared/rtl/bus.sv
+      - main/shared/rtl/ram_2p.sv
+      - main/shared/rtl/timer.sv
+      - main/shared/rtl/sim/simulator_ctrl.sv
+      - main/examples/simple_system/rtl/ibex_simple_system.sv
+  - target: all(simulation, compliance)
+    include_dirs:
+      - main/vendor/lowrisc_ip/ip/prim/rtl
+    files:
+      - main/shared/rtl/ram_1p.sv
+      - main/dv/riscv_compliance/rtl/riscv_testutil.sv
+      - main/dv/riscv_compliance/rtl/ibex_riscv_compliance.sv
+  - target: all(simulation, cosim)
+    files:
+      - main/dv/cosim/cosim_dpi.svh
+      - main/dv/verilator/simple_system_cosim/ibex_simple_system_cosim_checker.sv
+      - main/dv/verilator/simple_system_cosim/ibex_simple_system_cosim_checker_bind.sv

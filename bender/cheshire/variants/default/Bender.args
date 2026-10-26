@@ -1,5 +1,5 @@
 -p
-cheshire
+pulp_benchmark_cheshire
 -t
 rtl
 -t

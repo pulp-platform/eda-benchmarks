@@ -1,0 +1,28 @@
+--- a/sw/tests/src/event_unit.c
++++ b/sw/tests/src/event_unit.c
+@@ -43,11 +43,12 @@
+     n_workers = snrt_cluster_compute_core_num();
+     err |= run_and_verify_task(&arg, n_workers) << 0;
+ 
+-    // Dispatch a task on 4 harts and wait for its completion
++    // Dispatch on up to 4 available compute harts and wait for completion
+     printf("-- Test 2\n");
+     sum = 0;
+     arg = 20;
+-    n_workers = 4;
++    n_workers = snrt_cluster_compute_core_num();
++    if (n_workers > 4) n_workers = 4;
+     err |= run_and_verify_task(&arg, n_workers) << 1;
+ 
+     // Dispatch a task on 1 hart and wait for its completion
+--- a/sw/tests/src/caq.c
++++ b/sw/tests/src/caq.c
+@@ -7,7 +7,7 @@
+ 
+ #include <snrt.h>
+ 
+-#define NUM_WORKERS 4
++#define NUM_WORKERS ((snrt_cluster_core_num() < 4) ? snrt_cluster_core_num() : 4)
+ 
+ // To prevent X reads on non-CAQ-proofed systems, we need a sync
+ static inline void fp_sync() {

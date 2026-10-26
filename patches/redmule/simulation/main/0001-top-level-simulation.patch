@@ -1,0 +1,46 @@
+--- a/Makefile
++++ b/Makefile
+@@ -89,6 +89,7 @@
+ CC=$(Gcc)$(ISA)$(XLEN)-unknown-elf-gcc
+ LD=$(CC)
+ OBJDUMP=$(Gcc)$(ISA)$(XLEN)-unknown-elf-objdump
++OBJCOPY=$(Gcc)$(ISA)$(XLEN)-unknown-elf-objcopy
+ CC_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -O2 -g -Wextra -Wall -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wundef -fdata-sections -ffunction-sections -MMD -MP
+ LD_OPTS=-march=$(ARCH)$(XLEN)$(XTEN) -mabi=ilp32 -D__$(ISA)__ -MMD -MP -nostartfiles -nostdlib -Wl,--gc-sections
+ 
+@@ -102,7 +103,7 @@
+ 
+ # Build implicit rules
+ $(STIM_INSTR) $(STIM_DATA): $(BIN)
+-	$(Gcc)$(ISA)$(XLEN)-unknown-elf-objcopy --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
++	$(OBJCOPY) --srec-len 1 --output-target=srec $(BIN) $(BIN).s19
+ 	$(PYTHON) scripts/parse_s19.py < $(BIN).s19 > $(BIN).txt
+ 	$(PYTHON) scripts/s19tomem.py $(BIN).txt $(STIM_INSTR) $(STIM_DATA)
+ 
+--- a/sw/hal_redmule.h
++++ b/sw/hal_redmule.h
+@@ -14,8 +14,8 @@
+ #define REDMULE_ADDR_BASE REDMULE_BASE_ADD
+ #define REDMULE_ADDR_SPACE 0x00000100
+ 
+-#define HWPE_WRITE(value, offset) *(int *)(REDMULE_ADDR_BASE + offset) = value
+-#define HWPE_READ(offset) *(int *)(REDMULE_ADDR_BASE + offset)
++#define HWPE_WRITE(value, offset) *(volatile int *)(REDMULE_ADDR_BASE + offset) = value
++#define HWPE_READ(offset) *(volatile int *)(REDMULE_ADDR_BASE + offset)
+ 
+ static inline void redmule_x_add_set(unsigned int value) {
+   HWPE_WRITE(value, REDMULE_REG_OFFS + REDMULE_REG_X_PTR);
+--- a/target/sim/src/redmule_tb.sv
++++ b/target/sim/src/redmule_tb.sv
+@@ -342,9 +342,9 @@
+     $display("# hwpe cycles = %0d", cnt_cycles);
+     if(errors != 0) begin
+       $display("[TB] - Fail!");
+-      $error("[TB] - errors=%08x", errors);
++      $fatal(1, "[TB] - errors=%08x", errors);
+     end else begin
+-      $display("[TB] - Success!");
++      $display("TEST PASSED");
+       $display("[TB] - errors=%08x", errors);
+     end
+     $finish;

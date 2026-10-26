@@ -1,0 +1,2 @@
+main/vendor/lowrisc_ip/dv/verilator/cpp
+main/vendor/lowrisc_ip/dv/verilator/simutil_verilator/cpp

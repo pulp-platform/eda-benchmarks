@@ -1,0 +1,11 @@
+--- a/sw/tests/src/dma_1d.c
++++ b/sw/tests/src/dma_1d.c
+@@ -27,7 +27,7 @@
+ };
+ 
+ int main() {
+-    if (snrt_global_core_idx() != 8) return 0;  // only DMA core
++    if (!snrt_is_dm_core()) return 0;  // only DMA core
+     uint32_t errors = 0;
+     uint32_t nb_bytes;
+ 

@@ -1,0 +1,140 @@
+name: Verilator
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: cv32e40p.default }
+          - { target: opope.default }
+          - { target: redmule.default }
+          - { target: snitch_cluster.minimal }
+          - { target: snitch_cluster.default }
+          - { target: snitch_cluster.default_latch }
+          - { target: pulp_c910.default }
+          - { target: cheshire.default }
+          - { target: cva6.default, part: 1, parts: 4 }
+          - { target: cva6.default, part: 2, parts: 4 }
+          - { target: cva6.default, part: 3, parts: 4 }
+          - { target: cva6.default, part: 4, parts: 4 }
+          - { target: spatz.default, part: 1, parts: 4 }
+          - { target: spatz.default, part: 2, parts: 4 }
+          - { target: spatz.default, part: 3, parts: 4 }
+          - { target: spatz.default, part: 4, parts: 4 }
+          - { target: ara.default }
+          - { target: nvdla.top }
+          - { target: ita.default }
+          - { target: ibex.minimal }
+          - { target: ibex.full }
+          - { target: mempool.minpool }
+          - { target: mempool.mempool }
+          - { target: serial_link.default, part: 1, parts: 4 }
+          - { target: serial_link.default, part: 2, parts: 4 }
+          - { target: serial_link.default, part: 3, parts: 4 }
+          - { target: serial_link.default, part: 4, parts: 4 }
+          - { target: mempool.terapool, part: 1, parts: 4 }
+          - { target: mempool.terapool, part: 2, parts: 4 }
+          - { target: mempool.terapool, part: 3, parts: 4 }
+          - { target: mempool.terapool, part: 4, parts: 4 }
+          - { target: cvfpu.full, part: 1, parts: 8 }
+          - { target: cvfpu.full, part: 2, parts: 8 }
+          - { target: cvfpu.full, part: 3, parts: 8 }
+          - { target: cvfpu.full, part: 4, parts: 8 }
+          - { target: cvfpu.full, part: 5, parts: 8 }
+          - { target: cvfpu.full, part: 6, parts: 8 }
+          - { target: cvfpu.full, part: 7, parts: 8 }
+          - { target: cvfpu.full, part: 8, parts: 8 }
+          - { target: cvfpu.fp32_fma, part: 1, parts: 8 }
+          - { target: cvfpu.fp32_fma, part: 2, parts: 8 }
+          - { target: cvfpu.fp32_fma, part: 3, parts: 8 }
+          - { target: cvfpu.fp32_fma, part: 4, parts: 8 }
+          - { target: cvfpu.fp32_fma, part: 5, parts: 8 }
+          - { target: cvfpu.fp32_fma, part: 6, parts: 8 }
+          - { target: cvfpu.fp32_fma, part: 7, parts: 8 }
+          - { target: cvfpu.fp32_fma, part: 8, parts: 8 }
+          - { target: spi_host.default, part: 1, parts: 8 }
+          - { target: spi_host.default, part: 2, parts: 8 }
+          - { target: spi_host.default, part: 3, parts: 8 }
+          - { target: spi_host.default, part: 4, parts: 8 }
+          - { target: spi_host.default, part: 5, parts: 8 }
+          - { target: spi_host.default, part: 6, parts: 8 }
+          - { target: spi_host.default, part: 7, parts: 8 }
+          - { target: spi_host.default, part: 8, parts: 8 }
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf bison flex help2man gawk cmake libelf-dev libmpfr-dev libgmp-dev zlib1g-dev pkg-config
+      - name: Install Clang
+        run: sudo apt-get install -y clang-18
+      - name: Download package
+        run: |
+          version="v$(cat VERSION)"
+          archive="pulp-benchmarks-${version}.tar.gz"
+          gh release download "$version" --pattern "$archive" --dir "$RUNNER_TEMP/candidate"
+          mkdir benchmarks
+          tar -xzf "$RUNNER_TEMP/candidate/$archive" --strip-components=1 -C benchmarks
+      - name: Install Spike for Ibex co-simulation
+        if: startsWith(matrix.target, 'ibex.')
+        run: bash benchmarks/tools/install-spike.sh "$RUNNER_TEMP/spike"
+      - name: Identify simulator
+        id: simulator
+        env:
+          TARGET: ${{ matrix.target }}
+        run: printf 'pin=%s\n' "$(bash benchmarks/tools/install-verilator.sh --pin "$TARGET")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/verilator-tools
+          key: verilator-${{ steps.simulator.outputs.pin }}-ubuntu-24.04-${{ hashFiles('benchmarks/tools/install-verilator.sh') }}
+      - name: Install simulator
+        id: verilator
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          simulator=$(JOBS="$(nproc)" bash benchmarks/tools/install-verilator.sh "$TARGET" "$RUNNER_TEMP/verilator-tools")
+          printf 'command=%s\n' "$simulator" >> "$GITHUB_OUTPUT"
+      - name: Install solver
+        run: |
+          python3 -m venv "$RUNNER_TEMP/solver-tools"
+          "$RUNNER_TEMP/solver-tools/bin/pip" install z3-solver==4.13.3.0
+          printf '%s\n' "$RUNNER_TEMP/solver-tools/bin" >> "$GITHUB_PATH"
+      - name: Select CI partition
+        if: matrix.part
+        env:
+          TARGET: ${{ matrix.target }}
+          PART: ${{ matrix.part }}
+          PARTS: ${{ matrix.parts }}
+        run: |
+          found=0
+          for selection in "benchmarks/${TARGET%%.*}/data"/*/testcases.txt "benchmarks/${TARGET%%.*}/variants/${TARGET#*.}/data"/*/testcases.txt; do
+            [[ -f $selection ]] || continue
+            awk -v part="$PART" -v parts="$PARTS" '(NR - 1) % parts == part - 1' "$selection" > "$selection.part"
+            mv "$selection.part" "$selection"
+            printf '%s partition %s/%s: %s tests\n' "$TARGET" "$PART" "$PARTS" "$(wc -l < "$selection")"
+            found=1
+          done
+          [[ $found == 1 ]]
+      - name: Test package
+        env:
+          TARGET: ${{ matrix.target }}
+          SIMULATOR: ${{ steps.verilator.outputs.command }}
+        run: |
+          export PKG_CONFIG_PATH="$RUNNER_TEMP/spike/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+          export VERILATOR_SOLVER="$RUNNER_TEMP/solver-tools/bin/z3 --in"
+          make -k -j"$(nproc)" -C benchmarks verilator \
+            DESIGN="$TARGET" VERILATOR_COMMAND="$SIMULATOR"

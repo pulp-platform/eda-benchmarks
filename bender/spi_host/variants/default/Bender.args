@@ -1,7 +1,7 @@
 -p
 opentitan_peripherals
 -p
-oseda_bench_spi_host
+pulp_benchmark_spi_host
 -e
 axi
 -t

@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_snitch_cluster
+  name: pulp_benchmark_snitch_cluster
   authors:
     - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
@@ -7,4 +7,13 @@ package:
 dependencies:
   snitch_cluster: { path: "main" }
 
-sources: []
+sources:
+  - target: simulation
+    include_dirs:
+      - ../../../../testbenches/snitch_cluster/variants/minimal/data/host
+      - ../../dependencies/axi/include
+      - ../../dependencies/common_cells/include
+    files:
+      - main/target/sim/tb/tb_memory_axi.sv
+      - main/target/sim/tb/vip_snitch_cluster.sv
+      - main/target/sim/tb/testharness.sv

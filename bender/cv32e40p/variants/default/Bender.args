@@ -1,4 +1,4 @@
 -p
-oseda_bench_cv32e40p
+pulp_benchmark_cv32e40p
 -t
 synthesis

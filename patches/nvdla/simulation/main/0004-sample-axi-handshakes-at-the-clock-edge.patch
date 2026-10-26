@@ -1,0 +1,141 @@
+--- a/verif/verilator/nvdla.cpp
++++ b/verif/verilator/nvdla.cpp
+@@ -324,7 +324,26 @@
+ 	struct connections dla;
+ 	const char *name;
+ 	
+-public:	
++    bool aw_fire = false, w_fire = false, ar_fire = false;
++    bool r_fire = false, b_fire = false;
++    axi_aw_txn sampled_aw{}, sampled_ar{};
++    axi_w_txn sampled_w{};
++public:
++    // Snapshot stable request/response handshakes immediately before the edge.
++    void sample() {
++        aw_fire = *dla.aw_awvalid && *dla.aw_awready;
++        w_fire = *dla.w_wvalid && *dla.w_wready;
++        ar_fire = *dla.ar_arvalid && *dla.ar_arready;
++        r_fire = *dla.r_rvalid && *dla.r_rready;
++        b_fire = *dla.b_bvalid && *dla.b_bready;
++        sampled_aw = {*dla.aw_awid, *dla.aw_awaddr, *dla.aw_awlen};
++        sampled_ar = {*dla.ar_arid, *dla.ar_araddr, *dla.ar_arlen};
++        sampled_w.wstrb = *dla.w_wstrb;
++        sampled_w.wlast = *dla.w_wlast;
++        for (int i = 0; i < AXI_WIDTH / AXI_WDATA_TYLEN; ++i)
++            sampled_w.wdata[i] = dla.w_wdata[i];
++    }
++
+ 	AXIResponder(struct connections _dla, const char *_name) {
+ 		dla = _dla;
+ 		
+@@ -363,15 +382,17 @@
+ 	}
+ 	
+ 	void eval() {
++        if (!r0_fifo.empty() && (!r0_fifo.front().rvalid || r_fire)) r0_fifo.pop();
++        if (b_fire && !b_fifo.empty()) b_fifo.pop();
+ 		/* write request */
+-		if (*dla.aw_awvalid && *dla.aw_awready) {
+-			printf("(%lu) %s: write request from dla, addr %08lx id %d\n", ticks, name, (uint64_t) *dla.aw_awaddr, *dla.aw_awid);
++		if (aw_fire) {
++			printf("(%lu) %s: write request from dla, addr %08lx id %d\n", ticks, name, (uint64_t) sampled_aw.awaddr, sampled_aw.awid);
+ 			
+ 			axi_aw_txn txn;
+ 			
+-			txn.awid = *dla.aw_awid;
+-			txn.awaddr = *dla.aw_awaddr & ~(AXI_ADDR_TYPE)(AXI_WIDTH / 8 - 1);
+-			txn.awlen = *dla.aw_awlen;
++			txn.awid = sampled_aw.awid;
++			txn.awaddr = sampled_aw.awaddr & ~(AXI_ADDR_TYPE)(AXI_WIDTH / 8 - 1);
++			txn.awlen = sampled_aw.awlen;
+ 			aw_fifo.push(txn);
+ 			
+ 			*dla.aw_awready = 0;
+@@ -379,31 +400,31 @@
+ 			*dla.aw_awready = 1;
+ 		
+ 		/* write data */
+-		if (*dla.w_wvalid) {
+-			printf("(%lu) %s: write data from dla (%08lx...)\n", ticks, name, (uint64_t) dla.w_wdata[0]);
++		if (w_fire) {
++			printf("(%lu) %s: write data from dla (%08lx...)\n", ticks, name, (uint64_t) sampled_w.wdata[0]);
+ 			
+ 			axi_w_txn txn;
+ 			
+ 			for (int i = 0; i < AXI_WIDTH / AXI_WDATA_TYLEN; i++)
+-				txn.wdata[i] = dla.w_wdata[i];
+-			txn.wstrb = *dla.w_wstrb;
+-			txn.wlast = *dla.w_wlast;
++				txn.wdata[i] = sampled_w.wdata[i];
++			txn.wstrb = sampled_w.wstrb;
++			txn.wlast = sampled_w.wlast;
+ 			w_fifo.push(txn);
+ 		}
+ 		
+ 		/* read request */
+-		if (*dla.ar_arvalid && *dla.ar_arready) {
+-			AXI_ADDR_TYPE addr = *dla.ar_araddr & ~(AXI_ADDR_TYPE)(AXI_WIDTH / 8 - 1);
+-			uint8_t len = *dla.ar_arlen;
+-
+-			printf("(%lu) %s: read request from dla, addr %08lx burst %d id %d\n", ticks, name, (uint64_t) *dla.ar_araddr, *dla.ar_arlen, *dla.ar_arid);
++		if (ar_fire) {
++			AXI_ADDR_TYPE addr = sampled_ar.awaddr & ~(AXI_ADDR_TYPE)(AXI_WIDTH / 8 - 1);
++			uint8_t len = sampled_ar.awlen;
++
++			printf("(%lu) %s: read request from dla, addr %08lx burst %d id %d\n", ticks, name, (uint64_t) sampled_ar.awaddr, sampled_ar.awlen, sampled_ar.awid);
+ 			
+ 			do {
+ 				axi_r_txn txn;
+ 
+ 				txn.rvalid = 1;
+ 				txn.rlast = len == 0;
+-				txn.rid = *dla.ar_arid;
++				txn.rid = sampled_ar.awid;
+ 			
+ 				for (int i = 0; i < AXI_WIDTH / AXI_WDATA_TYLEN; i++) {
+ 					AXI_WDATA_TYPE da = 0;
+@@ -487,7 +508,7 @@
+ 		}
+ 
+ 		*dla.r_rvalid = 0;
+-		if (*dla.r_rready && !r0_fifo.empty()) {
++		if (!r0_fifo.empty()) {
+ 			axi_r_txn &txn = r0_fifo.front();
+ 			
+ 			*dla.r_rvalid = txn.rvalid;
+@@ -501,17 +522,15 @@
+ 				printf("(%lu) %s: read push: id %d, da %08lx\n",
+ 					ticks, name, txn.rid, (uint64_t) txn.rdata[0]);
+ 			
+-			r0_fifo.pop();
+ 		}
+ 		
+ 		/* write response */
+ 		*dla.b_bvalid = 0;
+-		if (*dla.b_bready && !b_fifo.empty()) {
++		if (!b_fifo.empty()) {
+ 			*dla.b_bvalid = 1;
+ 			
+ 			axi_b_txn &txn = b_fifo.front();
+ 			*dla.b_bid = txn.bid;
+-			b_fifo.pop();
+ 		}
+ 	}
+ };
+@@ -1041,12 +1060,14 @@
+ 			waiting = 0;
+ 		}
+ 		
+-		axi_dbb->eval();
++		axi_dbb->sample();
+ 		if (axi_cvsram)
+-			axi_cvsram->eval();
++			axi_cvsram->sample();
+ 
+ 		dla->dla_core_clk = 1;
+ 		dla->dla_csb_clk = 1;
+ 		dla->eval();
++        axi_dbb->eval();
++        if (axi_cvsram) axi_cvsram->eval();
+ 		ticks++;
+ #if VM_TRACE

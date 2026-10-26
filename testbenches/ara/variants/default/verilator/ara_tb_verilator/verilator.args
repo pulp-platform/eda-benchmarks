@@ -1,0 +1,12 @@
+--cc
+--exe
+--build
+-Wno-ENUMVALUE
+-Wno-BLKANDNBLK
+-GNrLanes=4
+-GVLEN=4096
+-CFLAGS
+-DTOPLEVEL_NAME=ara_tb_verilator -DNR_LANES=4
+-LDFLAGS
+-lelf
+--no-timing

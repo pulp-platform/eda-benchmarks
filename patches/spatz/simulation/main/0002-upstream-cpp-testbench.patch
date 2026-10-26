@@ -1,0 +1,41 @@
+--- a/hw/ip/snitch_test/src/tb_bin.cc
++++ b/hw/ip/snitch_test/src/tb_bin.cc
+@@ -6,8 +6,21 @@
+ 
+ #include "ipc.hh"
+ #include "sim.hh"
++#include "verilated.h"
+ 
+ int main(int argc, char **argv, char **env) {
++    Verilated::commandArgs(argc, argv);
++    std::vector<std::string> arguments{argv[0]};
++    int expected = 0;
++    for (int i = 1; i < argc; ++i) {
++        std::string arg(argv[i]);
++        if (arg.rfind("+PRELOAD=", 0) == 0) arguments.push_back(arg.substr(9));
++        else if (arg.rfind("+EXPECTED_EXIT_CODE=", 0) == 0) expected = std::stoi(arg.substr(20));
++        else if (arg.rfind("+verilator+", 0) != 0) arguments.push_back(arg);
++    }
++    std::vector<char *> pointers;
++    for (auto &arg : arguments) pointers.push_back(arg.data());
++    argc = pointers.size(); pointers.push_back(nullptr); argv = pointers.data();
+     // Write binary path to logs/binary for the `make annotate` target
+     FILE *fd;
+     fd = fopen("logs/.rtlbinary", "w");
+@@ -23,5 +36,8 @@
+     IpcIface ipc_iface(argc, argv);
+ 
+     auto sim = std::make_unique<sim::Sim>(argc, argv);
+-    return sim->run();
++    int actual = sim->run();
++    if (actual != expected) { fprintf(stderr, "Unexpected program exit: %d (expected %d)\n", actual, expected); return 1; }
++    puts("TEST PASSED");
++    return 0;
+ }
+--- a/hw/ip/snitch_test/src/tb_memory_axi.sv
++++ b/hw/ip/snitch_test/src/tb_memory_axi.sv
+@@ -1,3 +1,4 @@
++`include "common_cells/assertions.svh"
+ // Copyright 2020 ETH Zurich and University of Bologna.
+ // Solderpad Hardware License, Version 0.51, see LICENSE for details.
+ // SPDX-License-Identifier: SHL-0.51

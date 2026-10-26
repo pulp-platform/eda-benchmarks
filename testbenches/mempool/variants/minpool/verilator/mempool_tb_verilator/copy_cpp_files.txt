@@ -1,0 +1,8 @@
+main/hardware/tb/verilator/lowrisc_dv_verilator_memutil_dpi/cpp/dpi_memutil.cc
+main/hardware/tb/verilator/lowrisc_dv_verilator_memutil_dpi/cpp/mem_area.cc
+main/hardware/tb/verilator/lowrisc_dv_verilator_memutil_dpi/cpp/sv_scoped.cc
+main/hardware/tb/verilator/lowrisc_dv_verilator_memutil_verilator/cpp/verilator_memutil.cc
+main/hardware/tb/verilator/lowrisc_dv_verilator_simutil_verilator/cpp/verilated_toplevel.cc
+main/hardware/tb/verilator/lowrisc_dv_verilator_simutil_verilator/cpp/verilator_sim_ctrl.cc
+main/hardware/tb/verilator/mempool_main/mempool_tb_verilator.cc
+main/hardware/tb/dpi/traffic_generator.cpp

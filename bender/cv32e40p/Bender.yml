@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_cv32e40p
+  name: pulp_benchmark_cv32e40p
   authors:
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
 

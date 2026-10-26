@@ -1,0 +1,4 @@
++UVM_TESTNAME=spi_host_base_test
++UVM_NO_RELNOTES
++UVM_VERBOSITY=UVM_LOW
++cdc_instrumentation_enabled=1

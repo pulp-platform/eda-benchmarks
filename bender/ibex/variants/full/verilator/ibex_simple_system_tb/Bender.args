@@ -1,0 +1,4 @@
+-t
+simulation
+-D
+VERILATOR=1

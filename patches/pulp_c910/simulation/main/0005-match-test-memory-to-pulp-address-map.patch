@@ -1,0 +1,175 @@
+--- a/vendor/thead_openc910/smart_run/logical/axi/axi_interconnect128.v
++++ b/vendor/thead_openc910/smart_run/logical/axi/axi_interconnect128.v
+@@ -355,6 +355,15 @@
+ 
+ 
+ 
++  function automatic test_memory;
++    input [39:0] address;
++    begin
++      test_memory = (address <= 40'h01ff_ffff) ||
++                    (address >= 40'h0200_0000 && address <= 40'h0203_ffff) ||
++                    (address >= 40'h1000_0000 && address <= 40'h11ff_ffff);
++    end
++  endfunction
++
+   parameter SRAM_START = 40'h0000_0000;
+ //  parameter SRAM_END   = 40'h000fffff;
+   parameter SRAM_END   = 40'h01ff_ffff;
+@@ -370,9 +379,9 @@
+ 
+ 
+ 
+-  assign awsel0 = (awaddr>=SRAM_START) && (awaddr<=SRAM_END);
+-  assign awsel1 = (awaddr>=ERR1_START) && (awaddr<=ERR1_END);
+-  assign awsel2 = (awaddr>=APB_START)  && (awaddr<=APB_END);
++  assign awsel0 = test_memory(awaddr);
++  assign awsel1 = (awaddr>=ERR1_START) && (awaddr<=ERR1_END) && !awsel0;
++  assign awsel2 = (awaddr>=APB_START)  && (awaddr<=APB_END) && !awsel0;
+   assign awsel3 = (awaddr>=ERR2_START) && (awaddr<=ERR2_END);
+ 
+ 
+@@ -495,9 +504,9 @@
+     awaddr_store[39:0] = 40'h0;
+   end
+ 
+-  assign wsel0 = (awaddr_store>=SRAM_START) && (awaddr_store<=SRAM_END);
+-  assign wsel1 = (awaddr_store>=ERR1_START) && (awaddr_store<=ERR1_END);
+-  assign wsel2 = (awaddr_store>=APB_START)  && (awaddr_store<=APB_END);
++  assign wsel0 = test_memory(awaddr_store);
++  assign wsel1 = (awaddr_store>=ERR1_START) && (awaddr_store<=ERR1_END) && !wsel0;
++  assign wsel2 = (awaddr_store>=APB_START)  && (awaddr_store<=APB_END) && !wsel0;
+   assign wsel3 = (awaddr_store>=ERR2_START) && (awaddr_store<=ERR2_END);
+ 
+ 
+@@ -595,9 +604,9 @@
+ 
+ 
+ 
+-  assign arsel0 = (araddr>=SRAM_START) && (araddr<=SRAM_END);
+-  assign arsel1 = (araddr>=ERR1_START) && (araddr<=ERR1_END);
+-  assign arsel2 = (araddr>=APB_START)  && (araddr<=APB_END);
++  assign arsel0 = test_memory(araddr);
++  assign arsel1 = (araddr>=ERR1_START) && (araddr<=ERR1_END) && !arsel0;
++  assign arsel2 = (araddr>=APB_START)  && (araddr<=APB_END) && !arsel0;
+   assign arsel3 = (araddr>=ERR2_START) && (araddr<=ERR2_END);
+ 
+ 
+--- a/vendor/thead_openc910/smart_run/tests/lib/linker.lcf
++++ b/vendor/thead_openc910/smart_run/tests/lib/linker.lcf
+@@ -14,10 +14,10 @@
+ */
+ MEMORY
+ {
+-MEM1(RWX)  : ORIGIN = 0x00000000,  LENGTH = 0x40000
+-MEM2(RWX)  : ORIGIN = 0x00040000,  LENGTH = 0xc0000
++MEM1(RWX)  : ORIGIN = 0x02000000,  LENGTH = 0x40000
++MEM2(RWX)  : ORIGIN = 0x10040000,  LENGTH = 0xc0000
+ }
+-__kernel_stack = 0xee000 ;
++__kernel_stack = 0x100ee000 ;
+ 
+ ENTRY(__start)
+ 
+--- a/vendor/thead_openc910/smart_run/logical/tb/tb.v
++++ b/vendor/thead_openc910/smart_run/logical/tb/tb.v
+@@ -155,43 +155,47 @@
+     $display("\t********* Load program to memory *********");
+     while (get_section(section_addr, section_len)) begin
+       int i;
++      longint memory_addr;
+       $display("Loading section: addr %x len %x", section_addr, section_len);
+-      if (section_len > $size(buffer) || section_addr < 0 ||
+-          section_addr + section_len > 33554432 || section_addr % 16 != 0)
++      memory_addr = section_addr & 'h1ff_ffff;
++      if (section_len > $size(buffer) || section_addr < 0 || section_addr % 16 != 0 ||
++          !((section_addr < 'h0200_0000 && section_addr + section_len <= 'h0200_0000) ||
++            (section_addr >= 'h0200_0000 && section_addr + section_len <= 'h0204_0000) ||
++            (section_addr >= 'h1000_0000 && section_addr + section_len <= 'h1200_0000)))
+         $fatal(1, "ELF section outside test memory or unaligned");
+       void'(read_section(section_addr, buffer));
+       for (i = 0; i*16+0 < section_len; i++)
+-        `RTL_MEM.ram0.mem[(section_addr >> 4) + i] = buffer[i*16+0];
++        `RTL_MEM.ram0.mem[(memory_addr >> 4) + i] = buffer[i*16+0];
+       for (i = 0; i*16+1 < section_len; i++)
+-        `RTL_MEM.ram1.mem[(section_addr >> 4) + i] = buffer[i*16+1];
++        `RTL_MEM.ram1.mem[(memory_addr >> 4) + i] = buffer[i*16+1];
+       for (i = 0; i*16+2 < section_len; i++)
+-        `RTL_MEM.ram2.mem[(section_addr >> 4) + i] = buffer[i*16+2];
++        `RTL_MEM.ram2.mem[(memory_addr >> 4) + i] = buffer[i*16+2];
+       for (i = 0; i*16+3 < section_len; i++)
+-        `RTL_MEM.ram3.mem[(section_addr >> 4) + i] = buffer[i*16+3];
++        `RTL_MEM.ram3.mem[(memory_addr >> 4) + i] = buffer[i*16+3];
+       for (i = 0; i*16+4 < section_len; i++)
+-        `RTL_MEM.ram4.mem[(section_addr >> 4) + i] = buffer[i*16+4];
++        `RTL_MEM.ram4.mem[(memory_addr >> 4) + i] = buffer[i*16+4];
+       for (i = 0; i*16+5 < section_len; i++)
+-        `RTL_MEM.ram5.mem[(section_addr >> 4) + i] = buffer[i*16+5];
++        `RTL_MEM.ram5.mem[(memory_addr >> 4) + i] = buffer[i*16+5];
+       for (i = 0; i*16+6 < section_len; i++)
+-        `RTL_MEM.ram6.mem[(section_addr >> 4) + i] = buffer[i*16+6];
++        `RTL_MEM.ram6.mem[(memory_addr >> 4) + i] = buffer[i*16+6];
+       for (i = 0; i*16+7 < section_len; i++)
+-        `RTL_MEM.ram7.mem[(section_addr >> 4) + i] = buffer[i*16+7];
++        `RTL_MEM.ram7.mem[(memory_addr >> 4) + i] = buffer[i*16+7];
+       for (i = 0; i*16+8 < section_len; i++)
+-        `RTL_MEM.ram8.mem[(section_addr >> 4) + i] = buffer[i*16+8];
++        `RTL_MEM.ram8.mem[(memory_addr >> 4) + i] = buffer[i*16+8];
+       for (i = 0; i*16+9 < section_len; i++)
+-        `RTL_MEM.ram9.mem[(section_addr >> 4) + i] = buffer[i*16+9];
++        `RTL_MEM.ram9.mem[(memory_addr >> 4) + i] = buffer[i*16+9];
+       for (i = 0; i*16+10 < section_len; i++)
+-        `RTL_MEM.ram10.mem[(section_addr >> 4) + i] = buffer[i*16+10];
++        `RTL_MEM.ram10.mem[(memory_addr >> 4) + i] = buffer[i*16+10];
+       for (i = 0; i*16+11 < section_len; i++)
+-        `RTL_MEM.ram11.mem[(section_addr >> 4) + i] = buffer[i*16+11];
++        `RTL_MEM.ram11.mem[(memory_addr >> 4) + i] = buffer[i*16+11];
+       for (i = 0; i*16+12 < section_len; i++)
+-        `RTL_MEM.ram12.mem[(section_addr >> 4) + i] = buffer[i*16+12];
++        `RTL_MEM.ram12.mem[(memory_addr >> 4) + i] = buffer[i*16+12];
+       for (i = 0; i*16+13 < section_len; i++)
+-        `RTL_MEM.ram13.mem[(section_addr >> 4) + i] = buffer[i*16+13];
++        `RTL_MEM.ram13.mem[(memory_addr >> 4) + i] = buffer[i*16+13];
+       for (i = 0; i*16+14 < section_len; i++)
+-        `RTL_MEM.ram14.mem[(section_addr >> 4) + i] = buffer[i*16+14];
++        `RTL_MEM.ram14.mem[(memory_addr >> 4) + i] = buffer[i*16+14];
+       for (i = 0; i*16+15 < section_len; i++)
+-        `RTL_MEM.ram15.mem[(section_addr >> 4) + i] = buffer[i*16+15];
++        `RTL_MEM.ram15.mem[(memory_addr >> 4) + i] = buffer[i*16+15];
+     end
+     $display("\t********* Done loading memory *********");
+ 
+--- a/vendor/thead_openc910/smart_run/tests/cases/ISA/ISA_IMAC/ct_imac_smoke.s
++++ b/vendor/thead_openc910/smart_run/tests/cases/ISA/ISA_IMAC/ct_imac_smoke.s
+@@ -1814,10 +1814,10 @@
+ 
+ .global a_inst
+ a_inst:
+-      li x2,0x10000
+-      li x3,0x20000
+-      li x11,0x10000
+-      li x12,0x10008
++      li x2,0x10010000
++      li x3,0x10020000
++      li x11,0x10010000
++      li x12,0x10010008
+ .global check_lr
+ check_lr:
+       sw   x11,0x0(x2)
+--- a/vendor/thead_openc910/smart_run/tests/cases/ISA/ISA_AMO/ct_lsu_amo_basic_smart.s
++++ b/vendor/thead_openc910/smart_run/tests/cases/ISA/ISA_AMO/ct_lsu_amo_basic_smart.s
+@@ -29,10 +29,10 @@
+       DATA_CACHE_CLIV
+       MM_EN
+       DATA_CACHE_EN
+-      li x2,0x00090000
+-      li x3,0x000a0000
+-      li x11,0x00090000
+-      li x12,0x000a0008
++      li x2,0x10090000
++      li x3,0x100a0000
++      li x11,0x10090000
++      li x12,0x100a0008
+       li x28,0
+       li x29,3
+ .global start

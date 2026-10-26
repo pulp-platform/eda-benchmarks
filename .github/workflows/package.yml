@@ -1,0 +1,81 @@
+name: Package benchmarks
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-release
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TOOLCHAIN_REPOSITORY: ${{ github.repository }}
+      PYTHON: /usr/bin/python3
+      JAVA: /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Read version
+        run: |
+          version=$(cat VERSION)
+          if [[ ! $version =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            printf 'Expected VERSION to contain a version such as 1.0.0, got: %s\n' "$version" >&2
+            exit 1
+          fi
+          printf 'VERSION=v%s\n' "$version" >> "$GITHUB_ENV"
+
+      - name: Install build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bash build-essential ca-certificates cmake coreutils curl findutils \
+            gawk git libxml-simple-perl openjdk-17-jre-headless perl \
+            python3 python3-venv sed tar xz-utils
+
+      - name: Put firmware compilers on PATH
+        run: .github/scripts/install-toolchains.sh all "$RUNNER_TEMP/firmware-compilers" >> "$GITHUB_PATH"
+
+      - name: Generate all benchmarks
+        run: KEEP_BUILD_TOOLS=0 ./setup.sh
+
+      - name: Package release
+        run: |
+          cp VERSION benchmarks/VERSION
+          printf '%s\n' "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" > benchmarks/SOURCE_URL
+          git rev-parse HEAD^{tree} > source-tree.txt
+          package="pulp-benchmarks-${VERSION}"
+          mv benchmarks "$package"
+          archive="${package}.tar.gz"
+          tar --sort=name --owner=0 --group=0 --numeric-owner \
+            -czf "$archive" "$package"
+
+      - name: Prepare draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          archive="pulp-benchmarks-${VERSION}.tar.gz"
+          if draft=$(gh release view "$VERSION" --json isDraft --jq '.isDraft' 2>/dev/null); then
+            if [[ $draft != true ]]; then
+              printf 'Release %s is already published.\n' "$VERSION" >&2
+              exit 1
+            fi
+          else
+            gh release create "$VERSION" --draft --target "$GITHUB_SHA" \
+              --title "$VERSION" --generate-notes
+          fi
+          gh release upload "$VERSION" "$archive" source-tree.txt --clobber
+

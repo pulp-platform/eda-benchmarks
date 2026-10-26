@@ -4,7 +4,7 @@
 `include "axi/typedef.svh"
 `include "apb/typedef.svh"
 
-package oseda_bench_serial_link_pkg;
+package pulp_benchmark_serial_link_pkg;
   typedef logic [31:0] addr_t;
   typedef logic [63:0] data_t;
   typedef logic [7:0]  strb_t;
@@ -27,7 +27,7 @@ package oseda_bench_serial_link_pkg;
 endpackage
 
 module serial_link_synth
-  import oseda_bench_serial_link_pkg::*;
+  import pulp_benchmark_serial_link_pkg::*;
 (
   input  logic clk_i,
   input  logic rst_ni,

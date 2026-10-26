@@ -1,7 +1,7 @@
 -p
 redmule
 -p
-oseda_bench_redmule
+pulp_benchmark_redmule
 -e
 axi
 -t

@@ -1,0 +1,7 @@
+main/vendor/lowrisc_ip/dv/verilator/cpp/dpi_memutil.cc
+main/vendor/lowrisc_ip/dv/verilator/cpp/mem_area.cc
+main/vendor/lowrisc_ip/dv/verilator/cpp/sv_scoped.cc
+main/vendor/lowrisc_ip/dv/verilator/cpp/verilator_memutil.cc
+main/vendor/lowrisc_ip/dv/verilator/simutil_verilator/cpp/verilated_toplevel.cc
+main/vendor/lowrisc_ip/dv/verilator/simutil_verilator/cpp/verilator_sim_ctrl.cc
+main/dv/riscv_compliance/ibex_riscv_compliance.cc

@@ -1,0 +1,12 @@
+--cc
+--exe
+--build
+--timing
+--assert
+--timescale
+1ns/1ps
+-CFLAGS
+-DTbName=Vredmule_tb
+--trace
+-Wno-BLKANDNBLK
+-Wno-ENUMVALUE

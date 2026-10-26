@@ -1,0 +1,36 @@
+--- a/vendor/thead_openc910/smart_run/tests/cases/coremark/core_main.c
++++ b/vendor/thead_openc910/smart_run/tests/cases/coremark/core_main.c
+@@ -170,7 +170,7 @@
+ 	/* First some checks to make sure benchmark will run ok */
+ 	if (sizeof(struct list_head_s)>128) {
+ 		printf("list_head structure too big for comparable data!\n");
+-		return MAIN_RETURN_VAL;
++		return 1;
+ 	}
+ 	results[0].seed1=get_seed(1);
+ 	results[0].seed2=get_seed(2);
+@@ -361,10 +361,12 @@
+ 	if (time_in_secs(total_time) > 0)
+ 		printf("Iterations/Sec   : %d\n",default_num_contexts*results[0].iterations/time_in_secs(total_time));
+ #endif
++#ifndef FUNCTIONAL_TEST
+ 	if (time_in_secs(total_time) < 10) {
+ 		printf("ERROR! Must execute for at least 10 secs for a valid result!\n");
+ 		total_errors++;
+ 	}
++#endif
+ 
+ 	printf("Iterations       : %d\n",(ee_u32)default_num_contexts*results[0].iterations);
+ 	printf("Compiler version : %s\n",COMPILER_VERSION);
+@@ -417,9 +419,8 @@
+ 	portable_fini(&(results[0].port));
+ 
+         // while (ck_uart_status(&uart0));
+-        sim_end();
+-
+-	return MAIN_RETURN_VAL;	
++
++	return total_errors != 0;	
+ }
+ 
+ 

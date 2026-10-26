@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_serial_link
+  name: pulp_benchmark_serial_link
   authors:
     - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"

@@ -1,0 +1,4 @@
+package:
+  name: pulp_benchmark_spi_host_default_test
+dependencies:
+  spi_host_verification: {path: "../../../../../../testbenches/spi_host/build/host"}

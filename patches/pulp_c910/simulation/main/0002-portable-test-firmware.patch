@@ -1,0 +1,33 @@
+--- a/vendor/thead_openc910/smart_run/tests/lib/crt0.s
++++ b/vendor/thead_openc910/smart_run/tests/lib/crt0.s
+@@ -47,7 +47,7 @@
+   csrs mxstatus,x3
+   
+ # msmpr
+-  csrsi msmpr, 0x1
++  nop
+ 
+ # PART 1: initialize all registers
+   li  x1, 0
+@@ -125,9 +125,10 @@
+ 
+   # mccr2
+   li x3, 0xe0000009
+-  csrs mccr2,x3 
++  nop
+ 
+   jal	main
++  bnez a0, __fail
+ 
+   .global __exit
+ __exit:
+--- a/vendor/thead_openc910/smart_run/tests/cases/hello_world/hello_world.c
++++ b/vendor/thead_openc910/smart_run/tests/cases/hello_world/hello_world.c
+@@ -48,6 +48,6 @@
+   printf("!!! FAIL !!!");
+   printf("after ASM c is changed to %d!\n",c);
+ 
+-  return 0;
++  return c != 3;
+ }
+ 

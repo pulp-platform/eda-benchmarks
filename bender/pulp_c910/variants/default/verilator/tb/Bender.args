@@ -1,0 +1,8 @@
+-p
+pulp-c910
+-p
+pulp_benchmark_pulp_c910
+-t
+simulation
+-t
+tech_cells_generic_exclude_deprecated

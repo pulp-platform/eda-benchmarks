@@ -1,0 +1,2 @@
+main/hardware/deps/reqrsp_interface/src/reqrsp_intf.sv
+main/hardware/src/mempool_sub_group.sv

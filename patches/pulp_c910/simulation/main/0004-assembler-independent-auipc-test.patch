@@ -1,0 +1,23 @@
+--- a/vendor/thead_openc910/smart_run/tests/cases/ISA/ISA_IMAC/ct_imac_smoke.s
++++ b/vendor/thead_openc910/smart_run/tests/cases/ISA/ISA_IMAC/ct_imac_smoke.s
+@@ -249,13 +249,18 @@
+       .option rvc
+ .global AUIPC
+ AUIPC:
++      .option norvc
+       auipc x2, 0x0
+-      li x3, 0xa00e
++      lui x3, 0xa
++      addi x3, x3, 14
++      .option rvc
+       c.add x2, x3
++      .option norvc
+       auipc x4, 0xa
+       bne x2, x4, TEST_FAIL
+       auipc x2, 0x0
+-      li x3, 0x80000014
++      lui x3, 0x80000
++      addi x3, x3, 16
+       addw x2, x3, x2
+       auipc x4, 0x80000
+       bne x2, x4, TEST_FAIL

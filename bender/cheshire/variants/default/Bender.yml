@@ -1,5 +1,5 @@
 package:
-  name: cheshire
+  name: pulp_benchmark_cheshire
   authors:
     - "Nicole Narr <narrn@student.ethz.ch>"
     - "Christopher Reinwardt <creinwar@student.ethz.ch>"
@@ -44,3 +44,12 @@ sources:
   - main/hw/cheshire_pkg.sv
   - main/hw/cheshire_soc.sv
   - cheshire_synth.sv
+
+  - target: simulation
+    files:
+      - ../../dependencies/riscv-dbg/tb/jtag_dmi/jtag_intf.sv
+      - ../../dependencies/riscv-dbg/tb/jtag_dmi/jtag_test.sv
+      - main/target/sim/src/vip_cheshire_soc.sv
+      - main/target/sim/src/tb_cheshire_pkg.sv
+      - main/target/sim/src/fixture_cheshire_soc.sv
+      - main/target/sim/src/tb_cheshire_soc.sv

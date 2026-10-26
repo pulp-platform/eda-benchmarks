@@ -1,0 +1,119 @@
+--- a/tb/jtag_dmi/jtag_test.sv
++++ b/tb/jtag_dmi/jtag_test.sv
+@@ -50,10 +50,11 @@
+ 
+     // Set IR, but only if it needs to be set.
+     task set_ir(input logic [IrLength-1:0] opcode);
+-      logic opcode_unpacked [IrLength];
++      logic opcode_unpacked [$];
+       // check whether IR is already set to the right value
+       if (this.ir_select == opcode) return;
+-      {<<{opcode_unpacked}} = opcode;
++      opcode_unpacked.delete();
++      for (int i = 0; i < $bits(opcode); i++) opcode_unpacked.push_back(opcode[i]);
+       write_tms(1); // select DR scan
+       write_tms(1); // select IR scan
+       write_tms(0); // capture IR
+@@ -89,11 +90,12 @@
+ 
+     // Assumes JTAG FSM is already in shift DR state
+     task readwrite_bits(output logic rdata [$], input logic wdata [$], input logic tms_last);
++      rdata.delete();
+       for (int i = 0; i < wdata.size(); i++) begin
+         jtag.tdi <= #TA wdata[i];
+         if (i == (wdata.size() - 1)) jtag.tms <= #TA tms_last; // tms_last ? exit1 DR : shift DR
+         cycle_start();
+-        rdata[i] = jtag.tdo;
++        rdata.push_back(jtag.tdo);
+         cycle_end();
+       end
+       jtag.tms <= #TA 0; // tms_last ? pause DR : shift DR
+@@ -152,8 +154,9 @@
+     endtask
+ 
+     task get_idcode(output logic [31:0] idcode);
+-      logic read_data [32], write_data [32];
+-      write_data = '{default: 1'b0};
++      logic read_data [$];
++      logic write_data [$];
++      repeat (32) write_data.push_back(1'b0);
+       jtag.set_ir(IDCODE);
+       jtag.shift_dr();
+       jtag.readwrite_bits(read_data, write_data, 1'b0);
+@@ -162,9 +165,10 @@
+     endtask
+ 
+     task write_dtmcs(input logic [31:0] data);
+-      logic write_data [32];
++      logic write_data [$];
+       logic [31:0] write_data_packed = {data};
+-      {<<{write_data}} = write_data_packed;
++      write_data.delete();
++      for (int i = 0; i < $bits(write_data_packed); i++) write_data.push_back(write_data_packed[i]);
+       jtag.set_ir(DTMCSR);
+       jtag.shift_dr();
+       jtag.write_bits(write_data, 1'b1);
+@@ -172,11 +176,13 @@
+     endtask
+ 
+     task read_dtmcs(output dm::dtmcs_t data, input int wait_cycles = 10);
+-      logic read_data [32], write_data [32];
++      logic read_data [$];
++      logic write_data [$];
+       jtag.set_ir(DTMCSR);
+       jtag.shift_dr();
+       // shift out read data
+-      {<<{write_data}} = 32'b0;
++      write_data.delete();
++      repeat (32) write_data.push_back(1'b0);
+       jtag.readwrite_bits(read_data, write_data, 1'b1);
+       jtag.update_dr(1'b0);
+       data = dm::dtmcs_t'({<<{read_data}});
+@@ -188,9 +194,10 @@
+     endtask
+ 
+     task write_dmi(input dm::dm_csr_e address, input logic [31:0] data);
+-      logic write_data [DMIWidth];
++      logic write_data [$];
+       logic [DMIWidth-1:0] write_data_packed = {address, data, dm::DTM_WRITE};
+-      {<<{write_data}} = write_data_packed;
++      write_data.delete();
++      for (int i = 0; i < $bits(write_data_packed); i++) write_data.push_back(write_data_packed[i]);
+       jtag.set_ir(DMIACCESS);
+       jtag.shift_dr();
+       jtag.write_bits(write_data, 1'b1);
+@@ -199,10 +206,12 @@
+ 
+     task read_dmi(input dm::dm_csr_e address, output logic [31:0] data, input int wait_cycles = 10,
+                   output dm::dtm_op_status_e op);
+-      logic read_data [DMIWidth], write_data [DMIWidth];
++      logic read_data [$];
++      logic write_data [$];
+       logic [DMIWidth-1:0] data_out = 0;
+       automatic logic [DMIWidth-1:0] write_data_packed = {address, 32'b0, dm::DTM_READ};
+-      {<<{write_data}} = write_data_packed;
++      write_data.delete();
++      for (int i = 0; i < $bits(write_data_packed); i++) write_data.push_back(write_data_packed[i]);
+       jtag.set_ir(DMIACCESS);
+       // send read command
+       jtag.shift_dr();
+@@ -212,7 +221,8 @@
+       // shift out read data
+       jtag.shift_dr();
+       write_data_packed = {address, 32'b0, dm::DTM_NOP};
+-      {<<{write_data}} = write_data_packed;
++      write_data.delete();
++      for (int i = 0; i < $bits(write_data_packed); i++) write_data.push_back(write_data_packed[i]);
+       jtag.readwrite_bits(read_data, write_data, 1'b1);
+       jtag.update_dr(1'b0);
+       data_out = {<<{read_data}};
+@@ -227,7 +237,8 @@
+     // Note: read operations which have side-effects (e.g.
+     // reading SBData0) should not use this function
+     task read_dmi_exp_backoff(input dm::dm_csr_e address, output logic [31:0] data);
+-      logic read_data [DMIWidth], write_data [DMIWidth];
++      logic read_data [$];
++      logic write_data [$];
+       logic [DMIWidth-1:0] write_data_packed;
+       logic [DMIWidth-1:0] data_out = 0;
+       dm::dtm_op_status_e op = dm::DTM_SUCCESS;

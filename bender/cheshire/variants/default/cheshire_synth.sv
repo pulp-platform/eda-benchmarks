@@ -1,7 +1,7 @@
 // Copyright (c) 2026 ETH Zurich and University of Bologna.
 // SPDX-License-Identifier: Apache-2.0
 
-package oseda_bench_cheshire_pkg;
+package pulp_benchmark_cheshire_pkg;
   localparam cheshire_pkg::cheshire_cfg_t Cfg = cheshire_pkg::DefaultCfg;
 
   `include "cheshire/typedef.svh"
@@ -9,7 +9,7 @@ package oseda_bench_cheshire_pkg;
 endpackage
 
 module cheshire_synth
-  import oseda_bench_cheshire_pkg::*;
+  import pulp_benchmark_cheshire_pkg::*;
 (
   input  logic clk_i,
   input  logic rst_ni,

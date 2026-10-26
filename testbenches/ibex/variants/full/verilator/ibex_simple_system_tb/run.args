@@ -1,0 +1,2 @@
+--meminit=ram,${DATA_DIR}/firmware.txt,vmem
+--term-after-cycles=100000

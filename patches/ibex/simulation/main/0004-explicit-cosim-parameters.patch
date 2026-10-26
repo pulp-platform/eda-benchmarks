@@ -1,0 +1,21 @@
+--- a/dv/verilator/simple_system_cosim/ibex_simple_system_cosim_checker_bind.sv
++++ b/dv/verilator/simple_system_cosim/ibex_simple_system_cosim_checker_bind.sv
+@@ -4,12 +4,12 @@
+ 
+ module ibex_simple_system_cosim_checker_bind;
+   bind ibex_simple_system ibex_simple_system_cosim_checker#(
+-      .SecureIbex,
+-      .ICache,
+-      .PMPEnable,
+-      .PMPGranularity,
+-      .PMPNumRegions,
+-      .MHPMCounterNum
++      .SecureIbex(SecureIbex),
++      .ICache(ICache),
++      .PMPEnable(PMPEnable),
++      .PMPGranularity(PMPGranularity),
++      .PMPNumRegions(PMPNumRegions),
++      .MHPMCounterNum(MHPMCounterNum)
+     ) u_ibex_simple_system_cosim_checker_bind (
+       .clk_i            (IO_CLK),
+       .rst_ni           (IO_RST_N),

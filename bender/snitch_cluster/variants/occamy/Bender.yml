@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_snitch_cluster
+  name: pulp_benchmark_snitch_cluster
   authors:
     - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"

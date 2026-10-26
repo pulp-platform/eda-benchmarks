@@ -1,7 +1,7 @@
 // Copyright (c) 2026 ETH Zurich and University of Bologna.
 // SPDX-License-Identifier: Apache-2.0
 
-package oseda_bench_ara_pkg;
+package pulp_benchmark_ara_pkg;
   `include "axi/typedef.svh"
   `include "ara/intf_typedef.svh"
 
@@ -32,7 +32,7 @@ package oseda_bench_ara_pkg;
 endpackage
 
 module ara_synth
-  import oseda_bench_ara_pkg::*;
+  import pulp_benchmark_ara_pkg::*;
 (
   input  logic         clk_i,
   input  logic         rst_ni,

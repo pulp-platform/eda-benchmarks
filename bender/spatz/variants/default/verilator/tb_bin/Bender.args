@@ -1,0 +1,14 @@
+-p
+pulp_benchmark_spatz
+-t
+pulp_benchmark_spatz:simulation
+-t
+rtl
+-t
+spatz
+-t
+snitch_test
+-t
+spatz_test
+-t
+tech_cells_generic_exclude_deprecated
