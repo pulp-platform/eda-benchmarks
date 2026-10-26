@@ -2,30 +2,57 @@ name: Prepare toolchains
 
 on:
   workflow_dispatch:
+    inputs:
+      toolchain:
+        description: Toolchain to build
+        type: choice
+        options: [all, ara-gcc, ara-llvm, mempool-gcc, pulp-gcc, pulp-gcc-rv32imc, spatz-llvm]
+        default: all
   workflow_call:
+    inputs:
+      toolchain:
+        type: string
+        default: all
 
 permissions:
   contents: write
 
 concurrency:
-  group: prepare-toolchains-${{ github.ref }}
+  group: prepare-toolchains-${{ github.ref }}-${{ inputs.toolchain }}
   cancel-in-progress: true
 
 jobs:
+  select:
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - id: select
+        env:
+          TOOLCHAIN: ${{ inputs.toolchain }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          toolchains = {
+              'ara-gcc': {'installer': 'testbenches/ara/tools/gcc.sh'},
+              'ara-llvm': {'installer': 'testbenches/ara/tools/llvm.sh'},
+              'mempool-gcc': {'installer': 'testbenches/mempool/tools/gcc.sh'},
+              'pulp-gcc': {'installer': 'testbenches/common/tools/pulp-gcc.sh'},
+              'pulp-gcc-rv32imc': {'installer': 'testbenches/common/tools/pulp-gcc.sh', 'argument': 'rv32imc'},
+              'spatz-llvm': {'installer': 'testbenches/spatz/tools/llvm.sh'},
+          }
+          selected = os.environ['TOOLCHAIN']
+          entries = list(toolchains.values()) if selected == 'all' else [toolchains[selected]]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('matrix=' + json.dumps({'include': entries}) + '\n')
+          PY
   build:
+    needs: select
     runs-on: ubuntu-22.04
     timeout-minutes: 360
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - installer: testbenches/ara/tools/gcc.sh
-          - installer: testbenches/ara/tools/llvm.sh
-          - installer: testbenches/mempool/tools/gcc.sh
-          - installer: testbenches/common/tools/pulp-gcc.sh
-          - installer: testbenches/common/tools/pulp-gcc.sh
-            argument: rv32imc
-          - installer: testbenches/spatz/tools/llvm.sh
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -97,7 +124,12 @@ jobs:
           } > "$RUNNER_TEMP/toolchain-source-notes.md"
           cp "$RUNNER_TEMP/toolchain-source-notes.md" "$provenance/SOURCES.md"
           archive="$TOOL-linux-x86_64.tar.gz"
-          tar -C "$INSTALL" -I 'gzip -1' -cf "dist/$archive" .
+          compressor='gzip -1'
+          if [[ $INSTALLER == testbenches/ara/tools/llvm.sh ]]; then
+            archive="$TOOL-linux-x86_64.tar.xz"
+            compressor='xz -T0 -6'
+          fi
+          tar -C "$INSTALL" -I "$compressor" -cf "dist/$archive" .
           rm -rf -- "$RUNNER_TEMP/toolchain-build"
           (cd dist && sha256sum "$archive" > "$archive.sha256")
       - name: Upload compiler to draft release

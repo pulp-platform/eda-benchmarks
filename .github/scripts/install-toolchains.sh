@@ -36,12 +36,16 @@ for entry in "${installers[@]}"; do
     fi
     artifact=$(mktemp -d "$directory/toolchain.XXXXXX")
     trap 'rm -rf -- "$artifact"' EXIT
-    archive="$name-linux-x86_64.tar.gz"
+    asset_names=$(gh release view "$tag" --repo "$repository" --json assets --jq '.assets[].name')
+    archive="$name-linux-x86_64.tar.xz"
+    if ! grep -Fxq "$archive" <<< "$asset_names" || ! grep -Fxq "$archive.sha256" <<< "$asset_names"; then
+      archive="$name-linux-x86_64.tar.gz"
+    fi
     gh release download "$tag" --repo "$repository" --dir "$artifact" \
       --pattern "$archive" --pattern "$archive.sha256"
     (cd "$artifact" && sha256sum -c "$archive.sha256" >&2)
     mkdir -p "$install"
-    tar -xzf "$artifact/$archive" -C "$install"
+    tar -xf "$artifact/$archive" -C "$install"
     [[ -x $install/bin/$name ]]
     rm -rf -- "$artifact"
     trap - EXIT
