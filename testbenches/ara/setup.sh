@@ -44,6 +44,18 @@ cp "$ara/apps/riscv-tests/LICENSE" "$script_dir/data/ara_tb_verilator/LICENSE.ri
 cp "$ara/LICENSE" "$script_dir/data/ara_tb_verilator/LICENSE.ara"
 cp "$root/LICENSE.Apache-2.0" "$script_dir/data/ara_tb_verilator/LICENSE.Apache-2.0"
 cp "$install/share/ara-testbench/"LICENSE.* "$script_dir/data/ara_tb_verilator/"
+sed -n '1,/^#include/p' "$ara/apps/common/printf.c" > "$script_dir/data/ara_tb_verilator/LICENSE.printf"
+sed -n '1,/^\*\//p' "$ara/apps/jacobi2d/kernel/jacobi2d.c" > "$script_dir/data/ara_tb_verilator/LICENSE.jacobi2d"
+for directory in "${applications[@]}" common; do
+  while IFS= read -r -d '' notice; do
+    relative=${notice#"$ara/apps/"}
+    destination="$script_dir/data/ara_tb_verilator/LICENSES/ara-apps/$relative"
+    mkdir -p "$(dirname "$destination")"
+    cp "$notice" "$destination"
+  done < <(find "$ara/apps/$directory" -type f \
+    \( -iname 'LICENSE*' -o -iname 'COPYING*' -o -iname 'NOTICE*' -o \
+       -iname 'COPYRIGHT*' -o -iname 'README.license*' \) -print0)
+done
 printf '%s\n' \
   "Ara source: $(git -C "$ara" rev-parse HEAD)" \
   'LLVM: official LLVM 20.1.0 Linux x86-64 binary' \

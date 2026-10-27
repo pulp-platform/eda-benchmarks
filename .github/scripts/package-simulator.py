@@ -21,6 +21,26 @@ executables = sorted(p for p in build.glob('*/V*') if p.is_file() and p.stat().s
 if not executables:
     parser.error(f'No simulator executables found in {build}')
 
+host_libraries = (
+    'Dynamically linked glibc (including libm) and its use are covered by\n'
+    'LGPL-2.1-or-later; see LICENSE.LGPL-2.1.\n'
+    'Source: https://www.gnu.org/software/libc/\n')
+host_licenses = ['LICENSE.LGPL-2.1']
+if family in ('ara', 'ibex', 'mempool'):
+    host_libraries += (
+        'Dynamically linked elfutils libelf and its use are covered here by\n'
+        'LGPL-3.0-or-later.\n'
+        'Source: https://sourceware.org/elfutils/\n')
+elif family == 'cvfpu':
+    host_libraries += (
+        'Dynamically linked GNU MPFR and GNU MP (GMP), and their use, are\n'
+        'covered here by LGPL-3.0-or-later.\n'
+        'Sources: https://www.mpfr.org/ and https://gmplib.org/\n')
+if family in ('ara', 'ibex', 'mempool', 'cvfpu'):
+    host_libraries += 'See LICENSE.LGPL-3.0 and LICENSE.GPL-3.0.\n'
+    host_licenses += ['LICENSE.LGPL-3.0', 'LICENSE.GPL-3.0']
+host_libraries += 'Shared libraries are supplied by the host system.\n'
+
 with tempfile.TemporaryDirectory() as temporary:
     metadata = Path(temporary)
     with args.package_archive.open('rb') as stream:
@@ -28,10 +48,13 @@ with tempfile.TemporaryDirectory() as temporary:
     (metadata / 'package.sha256').write_text(digest + '\n')
     (metadata / 'README.txt').write_text(
         f'Prebuilt simulators for {args.target}.\n'
-        'IEEE VPI/DPI interface headers retain their separate notices.\n'
-        'Component license and notice files retain their package-relative paths.\n')
-    shutil.copyfile(package / 'tools/licenses/verilator/LICENSE.IEEE-1800',
-                    metadata / 'LICENSE.IEEE-1800')
+        'Embedded Verilator runtime: see LICENSE.Artistic-2.0.\n'
+        'Component licenses and notices retain their package-relative paths.\n\n'
+        + host_libraries)
+    for notice in ('LICENSE.IEEE-1800', 'LICENSE.Artistic-2.0'):
+        shutil.copyfile(package / 'tools/licenses/verilator' / notice, metadata / notice)
+    for notice in host_licenses:
+        shutil.copyfile(package / 'tools/licenses/host-libraries' / notice, metadata / notice)
     if family == 'ibex':
         notices = package / 'tools/licenses/spike-aadf648'
         shutil.copytree(notices, metadata / 'spike')
@@ -39,7 +62,7 @@ with tempfile.TemporaryDirectory() as temporary:
         for path in executables:
             archive.add(path, arcname=str(path.relative_to(package)), recursive=False)
         for path in sorted((package / family).rglob('*')):
-            if path.is_file() and (path.name.upper().startswith(('LICENSE', 'NOTICE', 'COPYING', 'COPYRIGHT'))
+            if path.is_file() and (path.name.upper().startswith(('LICENSE', 'NOTICE', 'COPYING', 'COPYRIGHT', 'README.LICENSE'))
                                    or 'LICENSES' in path.parts):
                 archive.add(path, arcname=str(path.relative_to(package)), recursive=False)
         for path in package.glob('LICENSE*'):

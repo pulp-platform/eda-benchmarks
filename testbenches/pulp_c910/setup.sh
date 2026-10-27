@@ -7,6 +7,7 @@ root=$(cd "$script_dir/../.." && pwd)
 rm -rf -- "$script_dir/data"
 mkdir -p "$script_dir/data/host"
 cp "$script_dir/elfloader.cpp" "$script_dir/data/host/"
+sed '/^#include/,$d' "$script_dir/elfloader.cpp" > "$script_dir/data/host/LICENSE.elfloader"
 source_dir="$root/deps/pulp_c910"
 tests="$source_dir/vendor/thead_openc910/smart_run/tests"
 toolchain=$("$script_dir/tools/gcc.sh")

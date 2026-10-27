@@ -5,9 +5,12 @@ fetch_source() {
   if [[ ! -d $destination/.git ]]; then
     mkdir -p "$destination"
     git -C "$destination" init -q
+  fi
+  if git -C "$destination" remote get-url origin >/dev/null 2>&1; then
+    git -C "$destination" remote set-url origin "$url"
+  else
     git -C "$destination" remote add origin "$url"
   fi
-  git -C "$destination" remote set-url origin "$url"
   if ! git -C "$destination" cat-file -e "$revision^{commit}" 2>/dev/null; then
     git -C "$destination" fetch --depth 1 origin "$revision"
   fi

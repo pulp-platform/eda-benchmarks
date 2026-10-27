@@ -7,6 +7,8 @@ if [[ ${1:-} == --key ]]; then
   print_key=1
   shift
 fi
+recipe_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+license_dir="$recipe_dir/licenses"
 script_dir=${TOOLCHAIN_WORK_DIR:?Pass the toolchain build directory}
 install="$script_dir/install/llvm"
 downloads="$script_dir/downloads"
@@ -16,7 +18,10 @@ downloads="$script_dir/downloads"
 }
 archive=LLVM-20.1.0-Linux-X64.tar.xz
 checksum=954ac51498519f6ed9540714fb04bc401f70039b296a8160dd1559be380788d7
-setup_key=$(sha256sum "${BASH_SOURCE[0]}" | cut -d ' ' -f1)
+setup_key=$({
+  sha256sum "${BASH_SOURCE[0]}"
+  (cd "$license_dir" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum)
+} | sha256sum | cut -d ' ' -f1)
 if [[ $print_key == 1 ]]; then
   printf '%s\n' "$setup_key"
   exit 0
@@ -30,13 +35,15 @@ if [[ ! -f $install/.llvm-key || $(cat "$install/.llvm-key") != "$setup_key" ]];
   fi
   (cd "$downloads" && printf '%s  %s\n' "$checksum" "$archive" | sha256sum -c - >&2)
   tar -xJf "$downloads/$archive" --strip-components=1 -C "$install"
-  for component in llvm clang lld; do
+  for component in llvm clang clang-tools-extra lld lldb bolt compiler-rt \
+      flang libc libcxx libcxxabi libunwind mlir openmp polly pstl; do
     notice="$install/share/licenses/sources/$component/LICENSE.TXT"
     mkdir -p "$(dirname "$notice")"
     curl -fL --retry 3 \
       "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-20.1.0/$component/LICENSE.TXT" \
       -o "$notice"
   done
+  cp -a "$license_dir/." "$install/share/licenses/third-party/"
   "$install/bin/clang" --version >&2
   printf '%s\n' "$setup_key" > "$install/.llvm-key"
 fi
