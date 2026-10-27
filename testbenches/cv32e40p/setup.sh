@@ -12,7 +12,7 @@ software="$root/deps/cv32e40p/example_tb/core"
 for selection in hello_world:custom/hello_world interrupt:interrupt/interrupt; do
   name=${selection%%:*}
   program=${selection#*:}
-  make -C "$software" -B "$program.hex" RISCV="$toolchain" \
+  make -C "$software" -j"${JOBS:-1}" -B "$program.hex" RISCV="$toolchain" \
     RISCV_EXE_PREFIX="$toolchain/bin/riscv32-unknown-elf-"
   mkdir -p "$script_dir/data/tb_top/$name"
   cp "$software/$program.hex" "$script_dir/data/tb_top/$name/firmware.txt"

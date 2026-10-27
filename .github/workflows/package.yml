@@ -50,7 +50,7 @@ jobs:
         run: .github/scripts/install-toolchains.sh all "$RUNNER_TEMP/firmware-compilers" >> "$GITHUB_PATH"
 
       - name: Generate all benchmarks
-        run: KEEP_BUILD_TOOLS=0 ./setup.sh
+        run: JOBS="$(nproc)" KEEP_BUILD_TOOLS=0 ./setup.sh
 
       - name: Package release
         run: |

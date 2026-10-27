@@ -8,7 +8,7 @@ rm -rf -- "$script_dir/data" "$script_dir"/variants/*/data
 toolchain=$("$script_dir/tools/gcc.sh")
 mkdir -p "$script_dir/build" "$script_dir/data/ibex_simple_system_tb"
 software="$root/deps/ibex/examples/sw/simple_system"
-make -C "$software/hello_test" -B hello_test.bin \
+make -C "$software/hello_test" -j"${JOBS:-1}" -B hello_test.bin \
   CC="$toolchain/bin/riscv32-unknown-elf-gcc" ARCH=rv32imc_zicsr
 "${PYTHON:-python3}" "$script_dir/bin_to_vmem.py" "$software/hello_test/hello_test.bin" \
   "$script_dir/data/ibex_simple_system_tb/firmware.txt"
@@ -61,7 +61,7 @@ cp "$toolchain/share/licenses/gcc/COPYING3" \
   "$script_dir/build/cosim/LICENSE.GPL-3.0"
 
 for program in pmp_smoke_test dit_test; do
-  make -C "$software/$program" -B "$program.bin" \
+  make -C "$software/$program" -j"${JOBS:-1}" -B "$program.bin" \
     CC="$toolchain/bin/riscv32-unknown-elf-gcc" ARCH=rv32imc_zicsr
 done
 "${PYTHON:-python3}" "$script_dir/prepare-cosim.py" "$script_dir"

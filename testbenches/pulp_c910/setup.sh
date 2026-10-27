@@ -37,7 +37,7 @@ for source in "${programs[@]}"; do
       -o "$name.o" "$name.s")
     skip=(-o "$name.o")
   fi
-  make -C "$build" -B "${skip[@]}" "$name.elf" FILE="$name" \
+  make -C "$build" -j"${JOBS:-1}" -B "${skip[@]}" "$name.elf" FILE="$name" \
     CC="$toolchain/bin/riscv64-unknown-elf-gcc" \
     FLAG_MARCH=-march=rv64imafdcxtheadc FLAG_ABI=-mabi=lp64d \
     CFLAGS="-march=rv64imafdcxtheadc -mabi=lp64d -O2 $extra_flags"

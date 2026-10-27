@@ -15,7 +15,7 @@ for configuration in minpool mempool terapool; do
   mkdir -p "$data"
   : > "$data/testcases.txt"
   for program in hello_world tests; do
-    make -C "$source_dir/software/apps/baremetal" -B "$program" \
+    make -C "$source_dir/software/apps/baremetal" -j"${JOBS:-1}" -B "$program" \
       MEMPOOL_DIR="$source_dir" config="$configuration" RISCV_PREFIX="$toolchain/bin/riscv32-unknown-elf-" \
       RISCV_CC="$toolchain/bin/riscv32-unknown-elf-gcc $extra_flags" \
       -o update-opcodes -o "data_$program.h"
