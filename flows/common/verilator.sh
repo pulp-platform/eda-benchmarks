@@ -167,7 +167,7 @@ verilator_seed() {
 run_simulation() {
   local run_log=$1
   shift
-  if ! timeout --kill-after=5s "${timeout_seconds}s" "$build_dir/V$top" \
+  if ! timeout --kill-after=5s "${timeout_seconds}s" "${simulation_command[@]}" \
     "+verilator+seed+$seed" "${run_args[@]}" "$@" 2>&1 | tee "$run_log"; then
     printf 'Simulation failed: %s\n' "$run_log" >&2
     return 1
@@ -189,6 +189,7 @@ run_in_directory() {
 }
 
 testcase=${4:-@default}
+case_data_dir=$data_dir
 if [[ $testcase == @default ]]; then
   directory="$log_dir"
 else
@@ -196,11 +197,36 @@ else
     printf 'Invalid simulation testcase: %s\n' "$testcase" >&2; exit 2;
   }
   directory="$log_dir/$testcase"
+  case_data_dir="$data_dir/$testcase"
   if [[ -f $data_dir/$testcase/run.args ]]; then
     while IFS= read -r arg || [[ -n $arg ]]; do
       [[ -z $arg || $arg == \#* ]] || run_args+=("${arg//'${DATA_DIR}'/$data_dir}")
     done < "$data_dir/$testcase/run.args"
   fi
+fi
+simulation_command=("$build_dir/V$top")
+if [[ -f $data_dir/run.py ]]; then
+  python_command=${PYTHON:-python3}
+  python_key=$(
+    {
+      sha256sum "$data_dir/requirements.txt"
+      "$python_command" -c 'import os, sys; print(os.path.realpath(sys.executable)); print(sys.version)'
+    } | sha256sum | cut -d ' ' -f1
+  )
+  python_cache="$variant_dir/build/python/$test_name"
+  python_venv="$python_cache/$python_key"
+  mkdir -p "$python_cache" "$log_dir"
+  (
+    flock 9
+    if [[ ! -f $python_venv/.ready || ! -x $python_venv/bin/python ]]; then
+      printf 'Preparing Python environment for %s/%s\n' "$target" "$test_name"
+      "$python_command" -m venv --clear "$python_venv"
+      "$python_venv/bin/python" -m pip install --disable-pip-version-check --no-cache-dir \
+        -r "$data_dir/requirements.txt" 2>&1 | tee "$log_dir/python-setup.log"
+      touch "$python_venv/.ready"
+    fi
+  ) 9> "$python_cache/.lock"
+  simulation_command=("$python_venv/bin/python" "$data_dir/run.py" "$case_data_dir" "$build_dir/V$top")
 fi
 printf 'Running %s/%s/%s (seed %s)\n' "$target" "$test_name" "$testcase" "$(verilator_seed)"
 run_in_directory "$directory"

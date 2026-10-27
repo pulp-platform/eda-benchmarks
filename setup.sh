@@ -302,8 +302,8 @@ if [[ -n ${selected_families[snitch_cluster]:-} ]]; then
     printf 'Snitch generation requires %s\n' "$python_command" >&2
     exit 1
   }
-  "$python_command" -c 'import sys; sys.exit(sys.version_info < (3, 10))' || {
-    printf 'Snitch generation requires Python 3.10 or newer; select a supported interpreter with PYTHON.\n' >&2
+  "$python_command" -c 'import sys; sys.exit(sys.version_info < (3, 11))' || {
+    printf 'Snitch generation requires Python 3.11 or newer; select a supported interpreter with PYTHON.\n' >&2
     exit 1
   }
   "$python_command" -c 'import venv' >/dev/null 2>&1 || {

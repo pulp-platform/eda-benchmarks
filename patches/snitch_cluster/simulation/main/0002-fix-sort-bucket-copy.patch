@@ -1,0 +1,15 @@
+--- a/sw/kernels/misc/sort/src/sort.h
++++ b/sw/kernels/misc/sort/src/sort.h
+@@ -110,9 +110,9 @@
+         for (uint8_t next_bucket = 0 + core_idx; next_bucket < numBuckets;
+              next_bucket += snrt_cluster_compute_core_num()) {
+             uint32_t i_x;
+-            for (uint32_t j = 0; j < bucket_count[core_idx]; j++) {
+-                i_x = j + idx_offset[core_idx];
+-                x[i_x] = buckets[core_idx][j];
++            for (uint32_t j = 0; j < bucket_count[next_bucket]; j++) {
++                i_x = j + idx_offset[next_bucket];
++                x[i_x] = buckets[next_bucket][j];
+             }
+         }
+     }

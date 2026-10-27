@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+numpy==2.2.6
+torch==2.9.0+cpu
+pyflexfloat==0.1.2
+humanize==4.14.0
+pyelftools==0.32
+json5==0.12.1
+scikit-learn==1.7.2
+matplotlib==3.10.7

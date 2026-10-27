@@ -19,7 +19,7 @@ sudo apt-get install bash build-essential ca-certificates cmake coreutils curl f
   python3-venv sed tar xz-utils
 ```
 
-Generation and test preparation require Java 17, Perl with `XML::Simple`, Make, GCC/G++, cpp, CMake 3.24 or newer, and Python 3.10 or newer with `venv` and pip. Java is selected through `JAVA`, `JAVA_HOME/bin/java`, or `java` from `PATH`, in that order. Set `PYTHON` to select the Python interpreter; setup creates virtual environments for Python dependencies as needed.
+Generation and test preparation require Java 17, Perl with `XML::Simple`, Make, GCC/G++, cpp, CMake 3.24 or newer, and Python 3.10 or newer with `venv` and pip (Python 3.11 or newer for Snitch). Java is selected through `JAVA`, `JAVA_HOME/bin/java`, or `java` from `PATH`, in that order. Set `PYTHON` to select the Python interpreter; setup creates virtual environments for Python dependencies as needed.
 
 From a Git clone of this repository, generate every benchmark with:
 
@@ -349,7 +349,7 @@ The package runs all 16 upstream one-channel traffic combinations. Upstream four
 
 #### Snitch Cluster
 
-The package runs 131 runtime/ISA programs for the minimal, default, and default-latch variants. Kernel tests requiring Python output verification are excluded. An explicit 1 ps delay on latch read outputs works around a race condition caused by Verilator treating nonblocking latch assignments as blocking assignments.
+The default and default-latch variants run 154 upstream runtime/ISA and kernel cases, including Python-verified kernels. The minimal variant runs 151 cases, excluding GELU, correlation, and K-means because it lacks floating-point divide/square-root hardware. A shared venv is created automatically for the Python verifiers. An explicit 1 ps delay on latch read outputs works around a race condition caused by Verilator treating nonblocking latch assignments as blocking assignments.
 
 The Occamy variant aggregates 48 default clusters and has no simulation testbench.
 
