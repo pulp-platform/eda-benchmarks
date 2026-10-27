@@ -106,8 +106,10 @@ if [[ $mode == build ]]; then
       printf 'Missing host libraries: %s. Set PKG_CONFIG_PATH to their lib/pkgconfig directory.\n' "${host_packages[*]}" >&2
       exit 1
     }
-    extra_args+=(-CFLAGS "$(pkg-config --cflags "${host_packages[@]}")")
-    extra_args+=(-LDFLAGS "$(pkg-config --libs "${host_packages[@]}")")
+    host_cflags=$(pkg-config --cflags "${host_packages[@]}")
+    host_ldflags=$(pkg-config --libs "${host_packages[@]}")
+    [[ -z $host_cflags ]] || extra_args+=(-CFLAGS "$host_cflags")
+    [[ -z $host_ldflags ]] || extra_args+=(-LDFLAGS "$host_ldflags")
   fi
 
   cpp_sources=()
