@@ -3,13 +3,24 @@
 # SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$script_dir/../../common/toolchain-cache.sh"
+check_install=
+if [[ ${1:-} == --check ]]; then
+  check_install=${2:?Pass the installation directory}
+  shift 2
+fi
 name=riscv-gcc-13.2.0-2024.08.28
 if [[ ${1:-} == --name ]]; then
   printf '%s\n' "$name"
   exit 0
 fi
+setup_key=$(sha256sum "$script_dir/gcc.sh" | cut -d ' ' -f1)
+if [[ -n $check_install ]]; then
+  toolchain_keys_match "$check_install" .setup-key "$setup_key"
+  exit
+fi
 existing=$(command -v "$name" || true)
-if [[ -n $existing && -x $existing ]]; then
+if [[ -n $existing ]] && toolchain_cache_matches "$existing" .setup-key "$setup_key"; then
   dirname "$(dirname "$(realpath -e -- "$existing")")"
   exit 0
 fi
@@ -20,8 +31,8 @@ checksum=ce0548a9649c63cf9aa3d4d6c85060cd134bf969f7afb705de20247c4e4d1243
   printf 'The prebuilt RISC-V compiler requires Linux x86-64.\n' >&2
   exit 1
 }
-setup_key=$(sha256sum "$script_dir/gcc.sh" | cut -d ' ' -f1)
 if [[ ! -f $install/.setup-key || $(cat "$install/.setup-key") != "$setup_key" ]]; then
+  rm -rf -- "$install"
   mkdir -p "$script_dir/downloads" "$install"
   if [[ ! -f $script_dir/downloads/$archive ]]; then
     curl -fL --retry 3 "https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2024.08.28/$archive" -o "$script_dir/downloads/$archive.part"

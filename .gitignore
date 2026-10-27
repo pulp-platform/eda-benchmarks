@@ -8,6 +8,7 @@ benchmarks/
 bender/bin/
 .venv/
 testbenches/*/build/
+testbenches/*/.preparation-key
 testbenches/*/downloads/
 testbenches/*/data/
 __pycache__/

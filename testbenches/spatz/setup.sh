@@ -4,6 +4,7 @@
 set -euo pipefail
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 root=$(cd "$script_dir/../.." && pwd)
+source "$root/testbenches/common/fetch-archive.sh"
 rm -rf -- "$script_dir/data"
 source_dir="$root/deps/spatz"
 compiler=$("$script_dir/tools/llvm.sh")
@@ -16,19 +17,10 @@ fi
 "$script_dir/.venv/bin/pip" install 'torch==2.5.1+cpu' --index-url https://download.pytorch.org/whl/cpu
 export PATH="$script_dir/.venv/bin:$PATH"
 mkdir -p "$script_dir/downloads" "$script_dir/data/host" "$script_dir/data/tb_bin"
-fetch() {
-  local name=$1 checksum=$2 url=$3
-  if [[ ! -f $script_dir/downloads/$name ]]; then
-    curl -fL --retry 3 "$url" -o "$script_dir/downloads/$name.part"
-    mv "$script_dir/downloads/$name.part" "$script_dir/downloads/$name"
-  fi
-  (cd "$script_dir/downloads" && printf '%s  %s\n' "$checksum" "$name" | sha256sum -c - >&2)
-}
 fesvr_revision=c663ea20a53f4316db8cb4d591b1c8e437f4a0c4
-fetch fesvr.tar.gz 3896bb8ac7b78edb7bbfa5f9b86070d4e145a802e670e7f113dcd462ad5dd166 \
-  "https://codeload.github.com/riscv/riscv-isa-sim/tar.gz/$fesvr_revision"
-mkdir -p "$script_dir/build/fesvr"
-tar xf "$script_dir/downloads/fesvr.tar.gz" --strip-components=1 -C "$script_dir/build/fesvr"
+fetch_archive "https://codeload.github.com/riscv/riscv-isa-sim/tar.gz/$fesvr_revision" \
+  3896bb8ac7b78edb7bbfa5f9b86070d4e145a802e670e7f113dcd462ad5dd166 "$script_dir/downloads/fesvr.tar.gz"
+extract_archive "$script_dir/downloads/fesvr.tar.gz" "$script_dir/build/fesvr"
 cp -a "$script_dir/build/fesvr/fesvr" "$script_dir/data/host/"
 patch "$script_dir/data/host/fesvr/device.h" < "$root/testbenches/common/patches/fesvr/0001-include-cstdint.patch"
 cp "$script_dir/build/fesvr/riscv/"{encoding,platform}.h "$script_dir/data/host/fesvr/"
@@ -39,10 +31,9 @@ python "$source_dir/util/clustergen.py" -c "$config" -o "$cluster/src"
 cp "$cluster/src/generated/bootdata.cc" "$script_dir/data/host/"
 build="$source_dir"
 opcodes_revision=4bb9eebfc2cb97bd4d27a43880c8fe684cee242e
-fetch opcodes.tar.gz a2f0795fb8a6edf1ef08bb2e5fd5639cfcbc395dab4c9a0a433a65da8e6bc446 \
-  "https://codeload.github.com/pulp-platform/riscv-opcodes/tar.gz/$opcodes_revision"
-mkdir -p "$build/sw/toolchain/riscv-opcodes"
-tar xf "$script_dir/downloads/opcodes.tar.gz" --strip-components=1 -C "$build/sw/toolchain/riscv-opcodes"
+fetch_archive "https://codeload.github.com/pulp-platform/riscv-opcodes/tar.gz/$opcodes_revision" \
+  a2f0795fb8a6edf1ef08bb2e5fd5639cfcbc395dab4c9a0a433a65da8e6bc446 "$script_dir/downloads/opcodes.tar.gz"
+extract_archive "$script_dir/downloads/opcodes.tar.gz" "$build/sw/toolchain/riscv-opcodes"
 mapfile -t config_args < <(python "$script_dir/config-to-cmake.py" "$config")
 for benchmark in "$build/sw/spatzBenchmarks/"*/; do
   for config_file in "$benchmark/script/"*.json; do

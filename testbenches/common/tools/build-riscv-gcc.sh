@@ -2,7 +2,13 @@
 # Copyright (c) 2026 ETH Zurich and University of Bologna.
 # SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
+print_key=0
+if [[ ${1:-} == --key ]]; then
+  print_key=1
+  shift
+fi
 source "$(dirname "${BASH_SOURCE[0]}")/../copy-licenses.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../toolchain-cache.sh"
 tool_dir=$1
 repository=$2
 revision=$3
@@ -13,7 +19,11 @@ build="$tool_dir/build/$name"
 install="$tool_dir/install/riscv-$name"
 jobs=${JOBS:-1}
 [[ $jobs =~ ^[1-9][0-9]*$ ]] || { printf 'JOBS must be a positive integer.\n' >&2; exit 1; }
-setup_key=$({ cat "${BASH_SOURCE[0]}"; declare -f copy_licenses; printf '%s\n' "$repository" "$revision" "$@"; } | sha256sum | cut -d ' ' -f1)
+setup_key=$({ cat "${BASH_SOURCE[0]}"; declare -f copy_licenses; printf '%s\n' "$repository" "$revision" "$@"; toolchain_build_settings; } | sha256sum | cut -d ' ' -f1)
+if [[ $print_key == 1 ]]; then
+  printf '%s\n' "$setup_key"
+  exit 0
+fi
 if [[ ! -f $install/.setup-key || $(cat "$install/.setup-key") != "$setup_key" ]]; then
   {
     rm -rf -- "$build" "$install"
@@ -27,7 +37,10 @@ if [[ ! -f $install/.setup-key || $(cat "$install/.setup-key") != "$setup_key" ]
       git -C "$source_dir" checkout --detach FETCH_HEAD
     fi
     mapfile -t components < <(git -C "$source_dir" config --file .gitmodules --get-regexp '^submodule\..*\.path$' | awk '$2 ~ /^(riscv-)?(binutils(-gdb)?|gdb|gcc|newlib)$/ {print $2}')
-    git -C "$source_dir" submodule update --init --depth 1 --jobs "$jobs" -- "${components[@]}"
+    git -C "$source_dir" reset --hard "$revision" >/dev/null
+    git -C "$source_dir" clean -fdx >/dev/null
+    git -C "$source_dir" submodule update --init --force --depth 1 --jobs "$jobs" -- "${components[@]}"
+    git -C "$source_dir" submodule foreach --recursive 'git reset --hard HEAD >/dev/null && git clean -fdx >/dev/null' >&2
     mkdir -p "$build" "$install"
     cd "$build"
     "../$name-source/configure" --prefix="$install" "$@"

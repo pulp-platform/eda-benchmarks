@@ -3,13 +3,24 @@
 # SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$script_dir/../../common/toolchain-cache.sh"
+check_install=
+if [[ ${1:-} == --check ]]; then
+  check_install=${2:?Pass the installation directory}
+  shift 2
+fi
 name=xuantie-gcc-2.6.1-20220906
 if [[ ${1:-} == --name ]]; then
   printf '%s\n' "$name"
   exit 0
 fi
+setup_key=$(sha256sum "$script_dir/gcc.sh" | cut -d ' ' -f1)
+if [[ -n $check_install ]]; then
+  toolchain_keys_match "$check_install" .setup-key "$setup_key"
+  exit
+fi
 existing=$(command -v "$name" || true)
-if [[ -n $existing && -x $existing ]]; then
+if [[ -n $existing ]] && toolchain_cache_matches "$existing" .setup-key "$setup_key"; then
   dirname "$(dirname "$(realpath -e -- "$existing")")"
   exit 0
 fi
@@ -19,8 +30,8 @@ checksum=cdff169b09e9424f127a71300ce2e62ab059291a1b3fbc56c115dfb91c29b991
 [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || {
   printf 'The Xuantie compiler binary requires Linux x86-64.\n' >&2; exit 1;
 }
-setup_key=$(sha256sum "$script_dir/gcc.sh" | cut -d ' ' -f1)
 if [[ ! -f $install/.setup-key || $(cat "$install/.setup-key") != "$setup_key" ]]; then
+  rm -rf -- "$install"
   mkdir -p "$script_dir/downloads" "$install"
   if [[ ! -f $script_dir/downloads/$archive ]]; then
     curl -fL --retry 3 "https://occ-oss-prod.oss-cn-hangzhou.aliyuncs.com/resource//1663142243961/$archive" \

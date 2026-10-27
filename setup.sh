@@ -510,6 +510,14 @@ EOF
   for index in "${!resolved_dependencies[@]}"; do
     ln -sfn "${resolved_dependency_paths[index]}" \
       "$project/dependencies/${resolved_dependencies[index]}"
+    # These are installer-owned checkouts, not the protected design submodules.
+    # Reset them before patching so removed/changed patches cannot survive reruns.
+    dependency_root=${resolved_dependency_paths[index]}
+    if [[ $dependency_root == "$root/bender/"*/.bender/* && \
+          $(git -C "$dependency_root" rev-parse --show-toplevel) == "$dependency_root" ]]; then
+      git -C "$dependency_root" reset --hard HEAD >/dev/null
+      git -C "$dependency_root" clean -fdx >/dev/null
+    fi
   done
   # Apply normal and enabled simulation dependency patches after resolving their
   # paths, before Bender generates source lists.
@@ -532,7 +540,7 @@ EOF
 
   testbench_setup="$root/testbenches/$family/setup.sh"
   if [[ $simulation_enabled == 1 && -f $testbench_setup ]]; then
-    KEEP_BUILD_TOOLS="$keep_build_tools" PYTHON="$python_command" BENDER="$bender" bash "$root/testbenches/setup.sh" "$family"
+    KEEP_BUILD_TOOLS="$keep_build_tools" PYTHON="$python_command" BENDER="$bender" bash "$root/testbenches/setup.sh" "$family" "$root/deps/$main_repository"
     if [[ $keep_build_tools == 0 ]]; then
       tool_directory="$root/testbenches/$family"
       rm -rf -- "$tool_directory/downloads" "$tool_directory/.venv" \

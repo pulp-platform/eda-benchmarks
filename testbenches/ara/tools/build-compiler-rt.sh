@@ -2,6 +2,12 @@
 # Copyright (c) 2026 ETH Zurich and University of Bologna.
 # SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/../../common/toolchain-cache.sh"
+print_key=0
+if [[ ${1:-} == --key ]]; then
+  print_key=1
+  shift
+fi
 script_dir=${TOOLCHAIN_WORK_DIR:?Pass the toolchain build directory}
 install=${1:?Pass the LLVM installation directory}
 build="$script_dir/build"
@@ -11,9 +17,16 @@ jobs=${JOBS:-1}
   exit 1
 }
 downloads="$script_dir/downloads"
-setup_key=$(cat "${BASH_SOURCE[0]}" "$install/.llvm-key" | sha256sum | cut -d ' ' -f1)
+llvm_key=$("$(dirname "${BASH_SOURCE[0]}")/build-llvm.sh" --key)
+newlib_key=$("$(dirname "${BASH_SOURCE[0]}")/build-newlib.sh" --key "$install")
+setup_key=$({ cat "${BASH_SOURCE[0]}"; printf '%s\n' "$llvm_key" "$newlib_key"; toolchain_build_settings; } | sha256sum | cut -d ' ' -f1)
+if [[ $print_key == 1 ]]; then
+  printf '%s\n' "$setup_key"
+  exit 0
+fi
 if [[ ! -f $install/.compiler-rt-key || $(cat "$install/.compiler-rt-key") != "$setup_key" ]]; then
   {
+  rm -rf -- "$build/compiler-rt" "$build/src/compiler-rt" "$build/src/cmake"
   mkdir -p "$downloads" "$build/src" "$install"
   release=https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.0
   for component in compiler-rt cmake; do

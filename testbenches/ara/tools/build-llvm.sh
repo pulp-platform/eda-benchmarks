@@ -2,6 +2,11 @@
 # Copyright (c) 2026 ETH Zurich and University of Bologna.
 # SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
+print_key=0
+if [[ ${1:-} == --key ]]; then
+  print_key=1
+  shift
+fi
 script_dir=${TOOLCHAIN_WORK_DIR:?Pass the toolchain build directory}
 install="$script_dir/install/llvm"
 downloads="$script_dir/downloads"
@@ -12,7 +17,12 @@ downloads="$script_dir/downloads"
 archive=LLVM-20.1.0-Linux-X64.tar.xz
 checksum=954ac51498519f6ed9540714fb04bc401f70039b296a8160dd1559be380788d7
 setup_key=$(sha256sum "${BASH_SOURCE[0]}" | cut -d ' ' -f1)
+if [[ $print_key == 1 ]]; then
+  printf '%s\n' "$setup_key"
+  exit 0
+fi
 if [[ ! -f $install/.llvm-key || $(cat "$install/.llvm-key") != "$setup_key" ]]; then
+  rm -rf -- "$install"
   mkdir -p "$downloads" "$install"
   if [[ ! -f $downloads/$archive ]]; then
     curl -fL --retry 3 "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.0/$archive" -o "$downloads/$archive.part" >&2

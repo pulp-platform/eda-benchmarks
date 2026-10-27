@@ -3,13 +3,24 @@
 # SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$script_dir/../../common/toolchain-cache.sh"
+check_install=
+if [[ ${1:-} == --check ]]; then
+  check_install=${2:?Pass the installation directory}
+  shift 2
+fi
 name=embecosm-gcc-13.2.0-build10
 if [[ ${1:-} == --name ]]; then
   printf '%s\n' "$name"
   exit 0
 fi
+setup_key=$(sha256sum "$script_dir/gcc.sh" | cut -d ' ' -f1)
+if [[ -n $check_install ]]; then
+  toolchain_keys_match "$check_install" .setup-key "$setup_key"
+  exit
+fi
 existing=$(command -v "$name" || true)
-if [[ -n $existing && -x $existing ]]; then
+if [[ -n $existing ]] && toolchain_cache_matches "$existing" .setup-key "$setup_key"; then
   dirname "$(dirname "$(realpath -e -- "$existing")")"
   exit 0
 fi
@@ -20,8 +31,8 @@ checksum=63feda7d4c6f1cd396367f9555da90bc57c9938235b531763fb6424f097dd28d
   printf 'The prebuilt RISC-V compiler requires Linux x86-64.\n' >&2
   exit 1
 }
-setup_key=$(sha256sum "$script_dir/gcc.sh" | cut -d ' ' -f1)
 if [[ ! -f $install/.setup-key || $(cat "$install/.setup-key") != "$setup_key" ]]; then
+  rm -rf -- "$install"
   mkdir -p "$script_dir/downloads" "$install"
   if [[ ! -f $script_dir/downloads/$archive ]]; then
     curl -fL --retry 3 "https://buildbot.embecosm.com/job/riscv32-gcc-ubuntu2204-release/10/artifact/$archive" -o "$script_dir/downloads/$archive.part"

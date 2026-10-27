@@ -5,6 +5,7 @@ script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 root=$(cd "$script_dir/../.." && pwd)
 rm -rf -- "$script_dir/data"
 source "$root/testbenches/common/fetch-source.sh"
+source "$root/testbenches/common/fetch-archive.sh"
 host="$script_dir/build/host"
 fetch_source https://github.com/lowRISC/opentitan.git \
   9f497f6339b4484fc5b7e5dc5d4bc63f55ec3c35 "$host/opentitan"
@@ -26,12 +27,9 @@ mark_testbench_changes "$host/opentitan"
   'mistletoe==1.4.0'
 mkdir -p "$script_dir/downloads" "$host/backend"
 archive="$script_dir/downloads/uvm-1.2.tar.gz"
-if [[ ! -f $archive ]]; then
-  curl -fL --retry 3 https://www.accellera.org/images/downloads/standards/uvm/uvm-1.2.tar.gz \
-    -o "$archive"
-fi
-printf '%s  %s\n' 502a2e605ce552bfd9767803c7e99a053715b00f7a9c4c511c3fbfddfb30157c "$archive" | sha256sum -c -
-tar -xzf "$archive" -C "$host"
+fetch_archive https://www.accellera.org/images/downloads/standards/uvm/uvm-1.2.tar.gz \
+  502a2e605ce552bfd9767803c7e99a053715b00f7a9c4c511c3fbfddfb30157c "$archive"
+extract_archive "$archive" "$host/uvm-1.2"
 curl -fL --retry 3 \
   https://raw.githubusercontent.com/verilator/verilator/08bbef72acdc8f3ec5b27e3275e75475bc974e2b/test_regress/t/uvm/v2020_3_1/dpi/uvm_hdl_verilator.c \
   -o "$host/backend/uvm_hdl_verilator.c"

@@ -4,6 +4,7 @@
 set -euo pipefail
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 root=$(cd "$script_dir/../.." && pwd)
+source "$root/testbenches/common/fetch-source.sh"
 rm -rf -- "$script_dir/data" "$script_dir"/variants/*/data
 toolchain=$("$script_dir/tools/gcc.sh")
 mkdir -p "$script_dir/build" "$script_dir/data/ibex_simple_system_tb"
@@ -21,13 +22,7 @@ printf '%s\n' \
 
 compliance_revision=844c6660ef3f0d9b96957991109dfd80cc4938e2
 compliance_source="$script_dir/build/compliance"
-if [[ ! -d $compliance_source/.git ]]; then
-  git init -q "$compliance_source"
-fi
-if [[ $(git -C "$compliance_source" rev-parse HEAD 2>/dev/null || true) != "$compliance_revision" ]]; then
-  git -C "$compliance_source" fetch --depth 1 https://github.com/riscv/riscv-compliance.git "$compliance_revision"
-  git -C "$compliance_source" checkout --detach FETCH_HEAD
-fi
+fetch_source https://github.com/riscv/riscv-compliance.git "$compliance_revision" "$compliance_source"
 "${PYTHON:-python3}" "$script_dir/prepare-compliance.py" "$compliance_source" \
   "$script_dir/data/ibex_riscv_compliance_tb" "$toolchain/bin/riscv32-unknown-elf-"
 

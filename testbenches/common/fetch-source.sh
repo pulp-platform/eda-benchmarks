@@ -7,10 +7,12 @@ fetch_source() {
     git -C "$destination" init -q
     git -C "$destination" remote add origin "$url"
   fi
+  git -C "$destination" remote set-url origin "$url"
   if ! git -C "$destination" cat-file -e "$revision^{commit}" 2>/dev/null; then
     git -C "$destination" fetch --depth 1 origin "$revision"
   fi
   git -C "$destination" checkout --detach --force "$revision"
+  git -C "$destination" clean -fdx
 }
 
 mark_testbench_changes() {

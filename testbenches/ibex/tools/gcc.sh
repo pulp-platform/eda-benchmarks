@@ -3,13 +3,24 @@
 # SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$script_dir/../../common/toolchain-cache.sh"
+check_install=
+if [[ ${1:-} == --check ]]; then
+  check_install=${2:?Pass the installation directory}
+  shift 2
+fi
 name=lowrisc-gcc-10.2.0-20220210-1
 if [[ ${1:-} == --name ]]; then
   printf '%s\n' "$name"
   exit 0
 fi
+setup_key=$(sha256sum "$script_dir/gcc.sh" | cut -d ' ' -f1)
+if [[ -n $check_install ]]; then
+  toolchain_keys_match "$check_install" .setup-key "$setup_key"
+  exit
+fi
 existing=$(command -v "$name" || true)
-if [[ -n $existing && -x $existing ]]; then
+if [[ -n $existing ]] && toolchain_cache_matches "$existing" .setup-key "$setup_key"; then
   dirname "$(dirname "$(realpath -e -- "$existing")")"
   exit 0
 fi
@@ -20,8 +31,8 @@ checksum=442a7d141d9148cdce0a44c31d452f43b41acc29f2015d8b91e079e9fe7fff67
   printf 'The prebuilt RISC-V compiler requires Linux x86-64.\n' >&2
   exit 1
 }
-setup_key=$(sha256sum "$script_dir/gcc.sh" | cut -d ' ' -f1)
 if [[ ! -f $install/.setup-key || $(cat "$install/.setup-key") != "$setup_key" ]]; then
+  rm -rf -- "$install"
   mkdir -p "$script_dir/downloads" "$install"
   if [[ ! -f $script_dir/downloads/$archive ]]; then
     curl -fL --retry 3 "https://github.com/lowRISC/lowrisc-toolchains/releases/download/20220210-1/$archive" -o "$script_dir/downloads/$archive.part"

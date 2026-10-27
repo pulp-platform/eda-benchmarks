@@ -44,9 +44,14 @@ for entry in "${installers[@]}"; do
     gh release download "$tag" --repo "$repository" --dir "$artifact" \
       --pattern "$archive" --pattern "$archive.sha256"
     (cd "$artifact" && sha256sum -c "$archive.sha256" >&2)
+    rm -rf -- "$install"
     mkdir -p "$install"
     tar -xf "$artifact/$archive" -C "$install"
     [[ -x $install/bin/$name ]]
+    "$installer" --check "$install" "${args[@]}" || {
+      printf 'Compiler release %s does not match the current build recipe; prepare it again.\n' "$tag" >&2
+      exit 1
+    }
     rm -rf -- "$artifact"
     trap - EXIT
     printf '%s\n' "$install/bin"

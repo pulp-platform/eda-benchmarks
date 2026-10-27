@@ -4,19 +4,12 @@
 set -euo pipefail
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 root=$(cd "$script_dir/../.." && pwd)
+source "$root/testbenches/common/fetch-archive.sh"
 rm -rf -- "$script_dir/data" "$script_dir"/variants/*/data
 source_dir="$root/deps/snitch_cluster"
 git -C "$source_dir" submodule update --init --recursive --depth 1 -- \
   sw/deps/riscv-opcodes sw/deps/printf sw/deps/riscv-tests
 mkdir -p "$script_dir/downloads" "$script_dir/data/host"
-fetch() {
-  local name=$1 checksum=$2 url=$3
-  if [[ ! -f $script_dir/downloads/$name ]]; then
-    curl -fL --retry 3 "$url" -o "$script_dir/downloads/$name.part"
-    mv "$script_dir/downloads/$name.part" "$script_dir/downloads/$name"
-  fi
-  (cd "$script_dir/downloads" && printf '%s  %s\n' "$checksum" "$name" | sha256sum -c - >&2)
-}
 compiler_version=22.1.7-pulp-0.1.0
 compiler=$("$script_dir/tools/llvm.sh")
 if [[ ! -x $script_dir/.venv/bin/python ]]; then
@@ -27,10 +20,9 @@ fi
   peakrdl-cheader==1.0.0 peakrdl-regblock==1.1.1 pymakeutils==1.5.0
 export PATH="$script_dir/.venv/bin:$PATH"
 fesvr_revision=35d50bc40e59ea1d5566fbd3d9226023821b1bb6
-fetch fesvr.tar.gz f502c50a5e8fbed8073627c999c3c2a8f09d9240db79ef8e9f1d43bf1818cab2 \
-  "https://codeload.github.com/riscv-software-src/riscv-isa-sim/tar.gz/$fesvr_revision"
-mkdir -p "$script_dir/build/fesvr"
-tar xf "$script_dir/downloads/fesvr.tar.gz" --strip-components=1 -C "$script_dir/build/fesvr"
+fetch_archive "https://codeload.github.com/riscv-software-src/riscv-isa-sim/tar.gz/$fesvr_revision" \
+  f502c50a5e8fbed8073627c999c3c2a8f09d9240db79ef8e9f1d43bf1818cab2 "$script_dir/downloads/fesvr.tar.gz"
+extract_archive "$script_dir/downloads/fesvr.tar.gz" "$script_dir/build/fesvr"
 patch "$script_dir/build/fesvr/fesvr/context.h" < "$source_dir/target/sim/patches/context.h.diff"
 patch "$script_dir/build/fesvr/fesvr/device.h" < "$source_dir/target/sim/patches/device.h.diff"
 cp -a "$script_dir/build/fesvr/fesvr" "$script_dir/data/host/"

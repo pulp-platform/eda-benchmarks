@@ -96,7 +96,7 @@ jobs:
           printf '%s %s\n' "$INSTALLER" "$ARGUMENT" > "$provenance/INSTALLER"
           git rev-parse HEAD > "$provenance/SOURCE_COMMIT"
           cp LICENSE.Apache-2.0 "$provenance/"
-          for script in "$INSTALLER" "${INSTALLER%/*}/"build-*.sh testbenches/common/tools/build-*.sh testbenches/common/copy-licenses.sh; do
+          for script in "$INSTALLER" "${INSTALLER%/*}/"build-*.sh testbenches/common/tools/build-*.sh testbenches/common/copy-licenses.sh testbenches/common/toolchain-cache.sh; do
             [[ -f $script ]] || continue
             cp --parents "$script" "$provenance/"
           done
