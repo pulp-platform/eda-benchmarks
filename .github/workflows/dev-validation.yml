@@ -21,5 +21,8 @@ jobs:
     if: contains(github.event.head_commit.message, '[ci:package]')
     uses: ./.github/workflows/package.yml
   verilator:
-    if: contains(github.event.head_commit.message, '[ci:verilator]')
+    needs: package
+    if: >-
+      ${{ !cancelled() && contains(github.event.head_commit.message, '[ci:verilator]') &&
+          (needs.package.result == 'success' || needs.package.result == 'skipped') }}
     uses: ./.github/workflows/verilator.yml
