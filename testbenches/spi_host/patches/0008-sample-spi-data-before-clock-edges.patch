@@ -1,0 +1,124 @@
+--- a/hw/dv/sv/spi_agent/spi_if.sv
++++ b/hw/dv/sv/spi_agent/spi_if.sv
+@@ -12,6 +12,14 @@
+ );
+   // standard spi interface pins
+   logic       sck;
++  clocking sample_pos @(posedge sck);
++    default input #1step;
++    input sio;
++  endclocking
++  clocking sample_neg @(negedge sck);
++    default input #1step;
++    input sio;
++  endclocking
+   logic [CSB_WIDTH-1:0] csb;
+ 
+   // spi host drives sio to x when idle. release to z in case the io is used for other peripheral
+--- a/hw/dv/sv/spi_agent/spi_agent_cfg.sv
++++ b/hw/dv/sv/spi_agent/spi_agent_cfg.sv
+@@ -128,6 +128,16 @@
+         sck_edge_type.name(), wait_posedge ? "posedge" : "negedge", sck_mode), UVM_DEBUG)
+   endtask
+ 
++  virtual task sample_sio(bit [CSB_WIDTH-1:0] csb_id, output logic [3:0] data);
++    if ({sck_polarity[csb_id], sck_phase[csb_id]} inside {2'b00, 2'b11}) begin
++      @(vif.sample_pos);
++      data = vif.sample_pos.sio;
++    end else begin
++      @(vif.sample_neg);
++      data = vif.sample_neg.sio;
++    end
++  endtask
++
+   // TODO use  dv_utils_pkg::endian_swap_byte_arr() if possible
+   virtual function void swap_byte_order(ref logic [7:0] data[$]);
+     bit [7:0] data_arr[];
+@@ -185,19 +195,20 @@
+                  input  bit [CSB_WIDTH-1:0] csb_id,
+                  output logic [7:0] data);
+     int which_bit = 8;
++    logic [3:0] sampled_bits;
+     while (which_bit != 0) begin
+-      wait_sck_edge(SamplingEdge, csb_id);
++      sample_sio(csb_id, sampled_bits);
+       case (num_lanes)
+-        1: data[--which_bit] = is_device_rsp ? vif.sio[1] : vif.sio[0];
++        1: data[--which_bit] = is_device_rsp ? sampled_bits[1] : sampled_bits[0];
+         2: begin
+-          data[--which_bit] = vif.sio[1];
+-          data[--which_bit] = vif.sio[0];
++          data[--which_bit] = sampled_bits[1];
++          data[--which_bit] = sampled_bits[0];
+         end
+         4: begin
+-          data[--which_bit] = vif.sio[3];
+-          data[--which_bit] = vif.sio[2];
+-          data[--which_bit] = vif.sio[1];
+-          data[--which_bit] = vif.sio[0];
++          data[--which_bit] = sampled_bits[3];
++          data[--which_bit] = sampled_bits[2];
++          data[--which_bit] = sampled_bits[1];
++          data[--which_bit] = sampled_bits[0];
+         end
+         default: `uvm_fatal(`gfn, $sformatf("Unsupported lanes num 0x%0h", num_lanes))
+       endcase
+--- a/hw/dv/sv/spi_agent/spi_monitor.sv
++++ b/hw/dv/sv/spi_agent/spi_monitor.sv
+@@ -129,11 +129,12 @@
+       endcase
+ 
+       for (int i = 0; i < num_samples; i = i + data_shift) begin : loop_num_samples
++        logic [3:0] sampled_bits;
+         // wait for the sampling edge
+-        cfg.wait_sck_edge(SamplingEdge, active_csb);
++        cfg.sample_sio(active_csb, sampled_bits);
+         // check sio not x
+         if (cfg.en_monitor_checks) begin
+-          foreach (cfg.vif.sio[i]) `DV_CHECK_CASE_NE(cfg.vif.sio[i], 1'bx)
++          foreach (sampled_bits[i]) `DV_CHECK_CASE_NE(sampled_bits[i], 1'bx)
+         end
+ 
+         which_bit_h = cfg.host_bit_dir ? i : 7 - i;
+@@ -141,33 +142,33 @@
+         case (cmd)
+           CmdOnly, ReadStd, WriteStd: begin
+             // sample sio[0] for tx
+-            host_byte[which_bit_h] = cfg.vif.sio[0];
++            host_byte[which_bit_h] = sampled_bits[0];
+             // sample sio[1] for rx
+-            device_byte[which_bit_d] = cfg.vif.sio[1];
++            device_byte[which_bit_d] = sampled_bits[1];
+           end // cmdonly,readstd,writestd
+           ReadDual, WriteDual: begin
+             // TODO, update this section if host_bit_dir can be 0
+             `DV_CHECK_EQ(cfg.host_bit_dir, 0, "currently assume host_bit_dir is 0")
+             `DV_CHECK_EQ(cfg.device_bit_dir, 0, "currently assume device_bit_dir is 0")
+             // sample sio[0] sio[1] for tx bidir
+-            host_byte[which_bit_h -: 2] = cfg.vif.sio[1:0];
++            host_byte[which_bit_h -: 2] = sampled_bits[1:0];
+             // sample sio[0] sio[1] for rx bidir
+-            device_byte[which_bit_h -: 2] = cfg.vif.sio[1:0];
++            device_byte[which_bit_h -: 2] = sampled_bits[1:0];
+           end // ReadDual,WriteDual
+           ReadQuad, WriteQuad: begin
+             // TODO, update this section if host_bit_dir can be 0
+             `DV_CHECK_EQ(cfg.host_bit_dir, 0, "currently assume host_bit_dir is 0")
+             `DV_CHECK_EQ(cfg.device_bit_dir, 0, "currently assume device_bit_dir is 0")
+             // sample sio[0] sio[1] sio[2] sio[3] for tx bidir
+-            host_byte[which_bit_h -: 4] = cfg.vif.sio[3:0];
++            host_byte[which_bit_h -: 4] = sampled_bits[3:0];
+             // sample sio[0] sio[1] sio[2] sio[3] for rx bidir
+-            device_byte[which_bit_h -: 4] = cfg.vif.sio[3:0];
++            device_byte[which_bit_h -: 4] = sampled_bits[3:0];
+           end // ReadQuad,WriteQuad
+           default: begin
+             // sample sio[0] for tx
+-            host_byte[which_bit_h] = cfg.vif.sio[0];
++            host_byte[which_bit_h] = sampled_bits[0];
+             // sample sio[1] for rx
+-            device_byte[which_bit_d] = cfg.vif.sio[1];
++            device_byte[which_bit_d] = sampled_bits[1];
+           end
+         endcase
+ 
