@@ -22,6 +22,7 @@ printf '%s  %s\n' f502c50a5e8fbed8073627c999c3c2a8f09d9240db79ef8e9f1d43bf1818ca
 mkdir -p "$script_dir/build/fesvr"
 tar xf "$archive" --strip-components=1 -C "$script_dir/build/fesvr"
 cp -a "$script_dir/build/fesvr/fesvr" "$script_dir/data/host/"
+patch "$script_dir/data/host/fesvr/device.h" < "$root/testbenches/common/patches/fesvr/0001-include-cstdint.patch"
 mv "$script_dir/data/host/fesvr/elfloader.cc" "$script_dir/data/host/fesvr/fesvr_elfloader.cc"
 cp "$script_dir/build/fesvr/riscv/encoding.h" "$script_dir/data/host/fesvr/"
 cp "$script_dir/fesvr_config.h" "$script_dir/data/host/fesvr/config.h"

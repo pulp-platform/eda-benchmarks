@@ -1,0 +1,11 @@
+--- a/device.h
++++ b/device.h
+@@ -1,6 +1,8 @@
++// Modified by the PULP benchmark suite.
+ #ifndef _DEVICE_H
+ #define _DEVICE_H
+ 
++#include <cstdint>
+ #include <vector>
+ #include <queue>
+ #include <cstring>

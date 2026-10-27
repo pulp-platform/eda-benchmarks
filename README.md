@@ -228,7 +228,7 @@ The optional tool installation scripts are prepared for Linux x86-64. The pinned
 [JOBS=<workers>] bash tools/install-verilator.sh ibex.minimal [<installation-directory>]
 ```
 
-The installer avoids duplicating the same Verilator versions if already installed. Source builds require autoconf, bison, flex, help2man, and Git. Python-package installation requires Python (selectable via `PYTHON`) with `venv` and pip. The installed `verilator-cli` can be used without activating the venv. The runner supplies the Python package's required compiler settings automatically.
+The installer avoids duplicating the same Verilator versions if already installed. Source builds require autoconf, bison, flex (including `libfl-dev` on Ubuntu), help2man, and Git. Python-package installation requires Python (selectable via `PYTHON`) with `venv` and pip. The installed `verilator-cli` can be used without activating the venv. The runner supplies the Python package's required compiler settings automatically.
 
 The pinned Spike build can be installed by the command below. The installer defaults to `tools/install/spike/` and prints the installation directory:
 

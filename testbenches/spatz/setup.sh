@@ -30,6 +30,7 @@ fetch fesvr.tar.gz 3896bb8ac7b78edb7bbfa5f9b86070d4e145a802e670e7f113dcd462ad5dd
 mkdir -p "$script_dir/build/fesvr"
 tar xf "$script_dir/downloads/fesvr.tar.gz" --strip-components=1 -C "$script_dir/build/fesvr"
 cp -a "$script_dir/build/fesvr/fesvr" "$script_dir/data/host/"
+patch "$script_dir/data/host/fesvr/device.h" < "$root/testbenches/common/patches/fesvr/0001-include-cstdint.patch"
 cp "$script_dir/build/fesvr/riscv/"{encoding,platform}.h "$script_dir/data/host/fesvr/"
 cp "$script_dir/fesvr_config.h" "$script_dir/data/host/fesvr/config.h"
 cluster="$source_dir/hw/system/spatz_cluster"
