@@ -34,7 +34,7 @@ if [[ $mode == list ]]; then
   fi
   exit
 fi
-if [[ $mode == build && -z ${VERILATOR_COMMAND:-} ]]; then
+if [[ $mode == build && ${VERILATOR_MODE:-all} != run && -z ${VERILATOR_COMMAND:-} ]]; then
   printf 'Set VERILATOR_COMMAND to a Verilator executable compatible with the selected design.\n' >&2
   exit 2
 fi
@@ -66,6 +66,14 @@ command -v timeout >/dev/null
 
 build_dir="$variant_dir/build/verilator/$test_name"
 log_dir="$variant_dir/logs/verilator/$test_name"
+if [[ $mode == build && ${VERILATOR_MODE:-all} == run ]]; then
+  [[ -x $build_dir/V$top ]] || {
+    printf 'Missing prebuilt simulator: %s/V%s\n' "$build_dir" "$top" >&2
+    exit 2
+  }
+  printf 'Reusing %s/V%s\n' "$build_dir" "$top"
+  exit
+fi
 if [[ $mode == build ]]; then
   verilator_executable=$(command -v -- "$VERILATOR_COMMAND") || {
     printf 'Verilator not found: %s\n' "$VERILATOR_COMMAND" >&2

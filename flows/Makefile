@@ -10,6 +10,10 @@ INTRA_THREADS ?=
 AST ?= 0
 CHECK ?= 0
 VERILATOR_COMMAND ?=
+VERILATOR_MODE ?= all
+ifeq ($(filter $(VERILATOR_MODE),all build run),)
+$(error VERILATOR_MODE must be all, build, or run)
+endif
 TEST ?=
 TESTCASE ?=
 TIMEOUT ?= 0
@@ -49,6 +53,7 @@ help:
 	  '  make verilator [DESIGN=<design.variant>] [TEST=<test>] [TESTCASE=<testcase>]' \
 	  '                VERILATOR_COMMAND=<path> [-j<count>]' \
 	  '                [TIMEOUT=0] [SEED=1]' \
+	  '                [VERILATOR_MODE=all|build|run (default: all)]' \
 	  '  make list'
 
 list:
@@ -85,6 +90,7 @@ $$(if $$(filter @error,$$(verilator_cases_$(1)_$(2))),$$(error Invalid testcase 
 verilator-build-$(1)-$(2):
 	+@BENCH_TOP='$($(1).$(2).TOP)' VERILATOR_COMMAND='$(VERILATOR_COMMAND)' \
 	 BENCH_MAKE='$(MAKE)' TIMEOUT='$(TIMEOUT)' \
+	 VERILATOR_MODE='$(VERILATOR_MODE)' \
 	 ./common/verilator.sh build '$(1)' '$(2)'
 verilator-$(1)-$(2): $$(foreach testcase,$$(call selected_verilator_cases,$(1),$(2)),verilator-$(1)-$(2)-$$(testcase))
 	@printf 'PASS: %s/%s\n' '$(1)' '$(2)'
@@ -93,7 +99,7 @@ endef
 
 $(foreach target,$(TARGETS),$(foreach test,$(call verilator_tests,$(target)),$(eval $(call declare_verilator_rule,$(target),$(test)))))
 
-verilator: check-verilator-selection $(SELECTED_VERILATOR_GOALS)
+verilator: check-verilator-selection $(if $(filter build,$(VERILATOR_MODE)),$(patsubst verilator-%,verilator-build-%,$(SELECTED_VERILATOR_GOALS)),$(SELECTED_VERILATOR_GOALS))
 
 check-selection:
 	@if [[ -n '$(DESIGN)' && -z '$(filter $(DESIGN),$(TARGETS))' ]]; then \

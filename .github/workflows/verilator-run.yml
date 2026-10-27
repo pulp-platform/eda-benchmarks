@@ -1,0 +1,137 @@
+name: Verilator run
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        required: true
+        type: string
+      parts:
+        description: Total number of partitions
+        default: 1
+        type: number
+      part:
+        description: Partition to run (0 runs all)
+        default: 0
+        type: number
+      build_run_id:
+        description: Workflow run containing the Verilator builds
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+      parts:
+        description: Total number of partitions
+        default: 1
+        type: number
+      part:
+        description: Partition to run (0 runs all)
+        default: 0
+        type: number
+      build_run_id:
+        default: ''
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  select:
+    runs-on: ubuntu-24.04
+    outputs:
+      parts: ${{ steps.select.outputs.parts }}
+    steps:
+      - id: select
+        env:
+          PARTS: ${{ inputs.parts }}
+          PART: ${{ inputs.part }}
+        run: |
+          python3 - <<'PYTHON'
+          import json, os
+          try:
+              parts, part = int(os.environ['PARTS']), int(os.environ['PART'])
+          except ValueError:
+              raise SystemExit('parts and part must be integers')
+          if parts < 1 or not 0 <= part <= parts:
+              raise SystemExit('parts must be positive; part must be between 0 and parts')
+          selected = [part] if part else list(range(1, parts + 1))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('parts=' + json.dumps(selected) + '\n')
+          PYTHON
+  test:
+    needs: select
+    name: ${{ inputs.target }} (${{ matrix.part }}/${{ inputs.parts }})
+    strategy:
+      fail-fast: false
+      matrix:
+        part: ${{ fromJSON(needs.select.outputs.parts) }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf bison flex libfl-dev help2man gawk cmake libelf-dev libmpfr-dev libgmp-dev zlib1g-dev pkg-config python3-venv
+      - name: Download package
+        run: |
+          version="v$(cat VERSION)"
+          archive="pulp-benchmarks-${version}.tar.gz"
+          gh release download "$version" --pattern "$archive" --dir "$RUNNER_TEMP/candidate"
+          mkdir benchmarks
+          tar -xzf "$RUNNER_TEMP/candidate/$archive" --strip-components=1 -C benchmarks
+      - name: Install Spike for Ibex co-simulation
+        if: startsWith(inputs.target, 'ibex.')
+        run: bash benchmarks/tools/install-spike.sh "$RUNNER_TEMP/spike"
+      - name: Install solver
+        run: |
+          python3 -m venv "$RUNNER_TEMP/solver-tools"
+          "$RUNNER_TEMP/solver-tools/bin/pip" install z3-solver==4.13.3.0
+          printf '%s\n' "$RUNNER_TEMP/solver-tools/bin" >> "$GITHUB_PATH"
+      - name: Download prebuilt simulators
+        env:
+          RELEASE: simulator-ci-${{ inputs.build_run_id || github.run_id }}
+          ARCHIVE: simulator-${{ inputs.target }}.tar.gz
+        run: |
+          [[ $(gh release view "$RELEASE" --json isDraft --jq '.isDraft') == true ]] || {
+            printf 'Simulator release %s must remain a draft.\n' "$RELEASE" >&2; exit 1;
+          }
+          gh release download "$RELEASE" --pattern "$ARCHIVE" --dir "$RUNNER_TEMP/simulators"
+          tar -xzf "$RUNNER_TEMP/simulators/$ARCHIVE" -C benchmarks
+          package_archive="$RUNNER_TEMP/candidate/pulp-benchmarks-v$(cat VERSION).tar.gz"
+          expected=$(cat benchmarks/ci-simulator/package.sha256)
+          [[ $(sha256sum "$package_archive" | cut -d ' ' -f1) == "$expected" ]] || {
+            printf 'Package differs from the simulator build; rerun the build jobs.\n' >&2; exit 1;
+          }
+      - name: Select CI partition
+        if: inputs.parts > 1
+        env:
+          TARGET: ${{ inputs.target }}
+          PART: ${{ matrix.part }}
+          PARTS: ${{ inputs.parts }}
+        run: |
+          found=0
+          for selection in "benchmarks/${TARGET%%.*}/data"/*/testcases.txt "benchmarks/${TARGET%%.*}/variants/${TARGET#*.}/data"/*/testcases.txt; do
+            [[ -f $selection ]] || continue
+            awk -v part="$PART" -v parts="$PARTS" '(NR - 1) % parts == part - 1' "$selection" > "$selection.part"
+            mv "$selection.part" "$selection"
+            printf '%s partition %s/%s: %s tests\n' "$TARGET" "$PART" "$PARTS" "$(wc -l < "$selection")"
+            found=1
+          done
+          [[ $found == 1 ]]
+      - name: Test package
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          export LD_LIBRARY_PATH="$RUNNER_TEMP/spike/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          export VERILATOR_SOLVER="$RUNNER_TEMP/solver-tools/bin/z3 --in"
+          make -k -j"$(nproc)" -C benchmarks verilator \
+            DESIGN="$TARGET" VERILATOR_MODE=run

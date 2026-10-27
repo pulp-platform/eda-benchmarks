@@ -1,0 +1,93 @@
+name: Verilator build
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  build:
+    name: ${{ inputs.target }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf bison flex libfl-dev help2man gawk cmake libelf-dev libmpfr-dev libgmp-dev zlib1g-dev pkg-config python3-venv
+      - name: Install Clang
+        run: sudo apt-get install -y clang-18
+      - name: Download package
+        run: |
+          version="v$(cat VERSION)"
+          archive="pulp-benchmarks-${version}.tar.gz"
+          gh release download "$version" --pattern "$archive" --dir "$RUNNER_TEMP/candidate"
+          mkdir benchmarks
+          tar -xzf "$RUNNER_TEMP/candidate/$archive" --strip-components=1 -C benchmarks
+      - name: Install Spike for Ibex co-simulation
+        if: startsWith(inputs.target, 'ibex.')
+        run: bash benchmarks/tools/install-spike.sh "$RUNNER_TEMP/spike"
+      - name: Identify simulator
+        id: simulator
+        env:
+          TARGET: ${{ inputs.target }}
+        run: printf 'pin=%s\n' "$(bash benchmarks/tools/install-verilator.sh --pin "$TARGET")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/verilator-tools
+          key: verilator-${{ steps.simulator.outputs.pin }}-ubuntu-24.04-${{ hashFiles('benchmarks/tools/install-verilator.sh') }}
+      - name: Install simulator
+        id: verilator
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          simulator=$(JOBS="$(nproc)" bash benchmarks/tools/install-verilator.sh "$TARGET" "$RUNNER_TEMP/verilator-tools")
+          printf 'command=%s\n' "$simulator" >> "$GITHUB_OUTPUT"
+      - name: Build simulators
+        env:
+          TARGET: ${{ inputs.target }}
+          SIMULATOR: ${{ steps.verilator.outputs.command }}
+        run: |
+          export PKG_CONFIG_PATH="$RUNNER_TEMP/spike/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+          make -k -j"$(nproc)" -C benchmarks verilator \
+            DESIGN="$TARGET" VERILATOR_COMMAND="$SIMULATOR" VERILATOR_MODE=build
+      - name: Archive simulators and license material
+        id: archive
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          archive="simulator-${TARGET}.tar.gz"
+          package_archive="$RUNNER_TEMP/candidate/pulp-benchmarks-v$(cat VERSION).tar.gz"
+          python3 .github/scripts/package-simulator.py benchmarks "$TARGET" \
+            "$package_archive" "$RUNNER_TEMP/$archive"
+          printf 'archive=%s\n' "$archive" >> "$GITHUB_OUTPUT"
+      - name: Upload simulators to draft release
+        env:
+          ARCHIVE: ${{ steps.archive.outputs.archive }}
+        run: |
+          tag="simulator-ci-${GITHUB_RUN_ID}"
+          if ! gh release view "$tag" --json isDraft > "$RUNNER_TEMP/simulator-release.json"; then
+            gh release create "$tag" --draft --target "$GITHUB_SHA" \
+              --title "CI simulators ${GITHUB_RUN_ID}" --notes "Compiled simulators for this workflow run." || \
+              gh release view "$tag" --json isDraft > "$RUNNER_TEMP/simulator-release.json"
+          fi
+          [[ $(gh release view "$tag" --json isDraft --jq '.isDraft') == true ]] || {
+            printf 'Simulator release %s must remain a draft.\n' "$tag" >&2; exit 1;
+          }
+          gh release upload "$tag" "$RUNNER_TEMP/$ARCHIVE" --clobber
