@@ -13,6 +13,8 @@ sources:
       - main/core/include/aes_pkg.sv
       - main/core/aes.sv
   - target: simulation
+    defines:
+      VERILATOR: ~
     include_dirs:
       - main/core/include
       - main/corev_apu/tb
