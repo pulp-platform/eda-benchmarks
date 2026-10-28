@@ -38,9 +38,9 @@ jobs:
     uses: ./.github/workflows/package.yml
   verilator:
     needs: package
-    if: inputs.verilator
+    if: ${{ !cancelled() && needs.package.result == 'success' && inputs.verilator }}
     uses: ./.github/workflows/verilator.yml
   yosys:
     needs: package
-    if: inputs.yosys
+    if: ${{ !cancelled() && needs.package.result == 'success' && inputs.yosys }}
     uses: ./.github/workflows/yosys.yml
