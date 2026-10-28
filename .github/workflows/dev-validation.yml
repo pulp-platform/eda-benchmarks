@@ -15,6 +15,10 @@ on:
         description: Build and run Verilator tests
         type: boolean
         default: true
+      yosys:
+        description: Run Yosys synthesis tests
+        type: boolean
+        default: false
   push:
     branches: [dev]
 
@@ -40,3 +44,9 @@ jobs:
       ${{ !cancelled() && (inputs.verilator || contains(github.event.head_commit.message, '[ci:verilator]')) &&
           (needs.package.result == 'success' || needs.package.result == 'skipped') }}
     uses: ./.github/workflows/verilator.yml
+  yosys:
+    needs: package
+    if: >-
+      ${{ !cancelled() && (inputs.yosys || contains(github.event.head_commit.message, '[ci:yosys]')) &&
+          (needs.package.result == 'success' || needs.package.result == 'skipped') }}
+    uses: ./.github/workflows/yosys.yml
