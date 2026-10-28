@@ -1,10 +1,11 @@
 package:
-  name: oseda_bench_opope
+  name: pulp_benchmark_opope
   authors:
     - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
 
 dependencies:
+  cv32e40p: { git: "https://github.com/pulp-platform/cv32e40p.git", rev: "pulpissimo-v4.1.0" }
   hwpe-stream: { git: "https://github.com/pulp-platform/hwpe-stream.git", version: 1.7 }
   hwpe-ctrl: { git: "https://github.com/pulp-platform/hwpe-ctrl.git", rev: v2.1.0 }
   hci: { git: "https://github.com/pulp-platform/hci.git", rev: v2.1.2 }
@@ -13,7 +14,7 @@ dependencies:
   tech_cells_generic: { git: "https://github.com/pulp-platform/tech_cells_generic.git", version: 0.2.11 }
 
 sources:
-  - target: synthesis
+  - target: any(synthesis, simulation)
     include_dirs:
       - main/rtl
     files:
@@ -32,3 +33,8 @@ sources:
       - main/rtl/opope_buffers.sv
       - main/rtl/opope_top.sv
       - main/rtl/opope_wrap.sv
+
+  - target: simulation
+    files:
+      - main/target/sim/src/tb_dummy_memory.sv
+      - main/target/sim/src/opope_tb.sv

@@ -1,0 +1,12 @@
+--cc
+--exe
+--build
+--timing
+--assert
+--timescale
+1ns/1ps
+--output-groups
+0
+-LDFLAGS
+-lpthread
+--trace

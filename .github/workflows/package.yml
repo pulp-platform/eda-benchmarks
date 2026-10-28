@@ -1,0 +1,94 @@
+name: Package benchmarks
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-release
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TOOLCHAIN_REPOSITORY: ${{ github.repository }}
+      PYTHON: /usr/bin/python3
+      JAVA: /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Read version
+        run: |
+          version=$(cat VERSION)
+          if [[ ! $version =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            printf 'Expected VERSION to contain a version such as 1.0.0, got: %s\n' "$version" >&2
+            exit 1
+          fi
+          printf 'VERSION=v%s\n' "$version" >> "$GITHUB_ENV"
+
+      - name: Install build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bash build-essential ca-certificates cmake coreutils curl findutils \
+            gawk git libxml-simple-perl openjdk-17-jre-headless perl \
+            python3 python3-venv sed tar xz-utils
+
+      - name: Generate and package RTL benchmarks
+        run: |
+          JOBS="$(nproc)" SIMULATION=0 KEEP_BUILD_TOOLS=0 ./setup.sh
+          cp VERSION benchmarks/VERSION
+          printf '%s\n' "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" > benchmarks/SOURCE_URL
+          printf 'rtl\n' > benchmarks/PACKAGE_KIND
+          package="pulp-benchmarks-${VERSION}"
+          mkdir -p dist/rtl
+          mv benchmarks "dist/rtl/$package"
+          tar --sort=name --owner=0 --group=0 --numeric-owner \
+            -czf "${package}.tar.gz" -C dist/rtl "$package"
+
+      - name: Put firmware compilers on PATH
+        run: .github/scripts/install-toolchains.sh all "$RUNNER_TEMP/firmware-compilers" >> "$GITHUB_PATH"
+
+      - name: Generate and package simulation benchmarks
+        run: |
+          JOBS="$(nproc)" SIMULATION=1 KEEP_BUILD_TOOLS=0 ./setup.sh
+          cp VERSION benchmarks/VERSION
+          printf '%s\n' "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" > benchmarks/SOURCE_URL
+          printf 'simulation\n' > benchmarks/PACKAGE_KIND
+          package="pulp-benchmarks-${VERSION}"
+          mkdir -p dist/simulation
+          mv benchmarks "dist/simulation/$package"
+          tar --sort=name --owner=0 --group=0 --numeric-owner \
+            -czf "${package}-simulation.tar.gz" -C dist/simulation "$package"
+          git rev-parse HEAD^{tree} > source-tree.txt
+
+      - name: Prepare draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          archive="pulp-benchmarks-${VERSION}.tar.gz"
+          if draft=$(gh release view "$VERSION" --json isDraft --jq '.isDraft' 2>/dev/null); then
+            if [[ $draft != true ]]; then
+              printf 'Release %s is already published.\n' "$VERSION" >&2
+              exit 1
+            fi
+          else
+            gh release create "$VERSION" --draft --target "$GITHUB_SHA" \
+              --title "$VERSION" --generate-notes
+          fi
+          gh release upload "$VERSION" "$archive" \
+            "pulp-benchmarks-${VERSION}-simulation.tar.gz" source-tree.txt --clobber
+

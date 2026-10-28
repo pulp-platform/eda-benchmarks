@@ -1,0 +1,6 @@
+-t
+simulation
+-t
+verilator
+-e
+common_verification

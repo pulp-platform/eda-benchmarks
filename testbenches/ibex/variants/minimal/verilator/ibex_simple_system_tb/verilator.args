@@ -1,0 +1,10 @@
+--cc
+--exe
+--build
+--assert
+--timescale
+1ns/1ps
+-CFLAGS
+-DTOPLEVEL_NAME=ibex_simple_system
+-LDFLAGS
+-pthread -lutil -lelf

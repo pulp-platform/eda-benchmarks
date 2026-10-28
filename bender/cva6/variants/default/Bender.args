@@ -1,7 +1,7 @@
 -p
 cva6
 -p
-oseda_bench_cva6
+pulp_benchmark_cva6
 -t
 synthesis
 -t

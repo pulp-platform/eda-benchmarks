@@ -1,0 +1,6 @@
+-t
+simulation
+-t
+compliance
+-D
+VERILATOR=1

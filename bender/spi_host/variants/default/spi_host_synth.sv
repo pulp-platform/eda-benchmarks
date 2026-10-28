@@ -3,7 +3,7 @@
 
 `include "register_interface/typedef.svh"
 
-package oseda_bench_spi_host_pkg;
+package pulp_benchmark_spi_host_pkg;
   typedef logic [31:0] addr_t;
   typedef logic [31:0] data_t;
   typedef logic [3:0]  strb_t;
@@ -11,7 +11,7 @@ package oseda_bench_spi_host_pkg;
 endpackage
 
 module spi_host_synth
-  import oseda_bench_spi_host_pkg::*;
+  import pulp_benchmark_spi_host_pkg::*;
 (
   input  logic       clk_i,
   input  logic       rst_ni,

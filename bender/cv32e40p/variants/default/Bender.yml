@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_cv32e40p
+  name: pulp_benchmark_cv32e40p
   authors:
     - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
@@ -7,7 +7,7 @@ package:
 dependencies: {}
 
 sources:
-  - target: synthesis
+  - target: any(synthesis, simulation)
     include_dirs:
       - main/rtl/include
     files:
@@ -39,3 +39,15 @@ sources:
       - main/rtl/cv32e40p_sleep_unit.sv
       - main/rtl/cv32e40p_register_file_ff.sv
       - main/bhv/cv32e40p_sim_clock_gate.sv
+  - target: simulation
+    files:
+      - main/rtl/cv32e40p_top.sv
+      - main/example_tb/core/include/perturbation_pkg.sv
+      - main/example_tb/core/amo_shim.sv
+      - main/example_tb/core/cv32e40p_random_interrupt_generator.sv
+      - main/example_tb/core/riscv_gnt_stall.sv
+      - main/example_tb/core/riscv_rvalid_stall.sv
+      - main/example_tb/core/dp_ram.sv
+      - main/example_tb/core/mm_ram.sv
+      - main/example_tb/core/cv32e40p_tb_subsystem.sv
+      - main/example_tb/core/tb_top.sv

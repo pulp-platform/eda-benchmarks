@@ -1,0 +1,11 @@
+--- a/verif/verilator/nvdla.cpp
++++ b/verif/verilator/nvdla.cpp
+@@ -422,7 +422,7 @@
+ 			txn.rvalid = 0;
+ 			txn.rid = 0;
+ 			txn.rlast = 0;
+-			for (int i = 0; i < AXI_WIDTH / 32; i++) {
++			for (int i = 0; i < AXI_WIDTH / AXI_WDATA_TYLEN; i++) {
+ 				txn.rdata[i] = (AXI_WDATA_TYPE)0x5555555555555555ULL;
+ 			}
+ 			

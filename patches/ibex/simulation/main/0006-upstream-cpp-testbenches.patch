@@ -1,0 +1,13 @@
+--- a/dv/verilator/simple_system_cosim/simple_system_cosim.cc
++++ b/dv/verilator/simple_system_cosim/simple_system_cosim.cc
+@@ -50,6 +50,10 @@
+   }
+ 
+   virtual bool Finish() {
++    if (!_cosim || _cosim->get_insn_cnt() == 0) {
++      std::cerr << "No instructions checked by Spike\n";
++      return false;
++    }
+     std::cout << "Co-simulation matched " << _cosim->get_insn_cnt()
+               << " instructions\n";
+ 

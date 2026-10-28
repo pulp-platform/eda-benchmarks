@@ -1,0 +1,46 @@
+name: Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      toolchain:
+        description: Toolchain to build before generating the package
+        type: choice
+        options: [none, all, ara-gcc, ara-llvm, mempool-gcc, pulp-gcc, pulp-gcc-rv32imc, spatz-llvm]
+        default: none
+      verilator:
+        description: Build and run Verilator tests
+        type: boolean
+        default: true
+      yosys:
+        description: Run Yosys synthesis tests
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: benchmark-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  toolchains:
+    if: inputs.toolchain != 'none'
+    uses: ./.github/workflows/toolchains.yml
+    with:
+      toolchain: ${{ inputs.toolchain }}
+  package:
+    needs: toolchains
+    if: >-
+      ${{ !cancelled() &&
+          (needs.toolchains.result == 'success' || needs.toolchains.result == 'skipped') }}
+    uses: ./.github/workflows/package.yml
+  verilator:
+    needs: package
+    if: inputs.verilator
+    uses: ./.github/workflows/verilator.yml
+  yosys:
+    needs: package
+    if: inputs.yosys
+    uses: ./.github/workflows/yosys.yml

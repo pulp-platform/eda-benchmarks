@@ -1,0 +1,86 @@
+--- a/hardware/tb/verilator/ara_tb.cpp
++++ b/hardware/tb/verilator/ara_tb.cpp
+@@ -26,16 +26,18 @@
+   // Initialize the DRAM
+   MemAreaLoc l2_mem = {.base=0x80000000, .size=0x00100000};
+   memutil.RegisterMemoryArea(
+-                             "ram", "TOP.ara_tb_verilator.dut.i_ara_soc.i_dram", 64*NR_LANES/2, &l2_mem);
++                             "ram", "TOP.ara_tb_verilator", 64*NR_LANES/2, &l2_mem);
+   simctrl.RegisterExtension(&memutil);
+ 
+   simctrl.SetInitialResetDelay(5);
+   simctrl.SetResetDuration(5);
+ 
++  tb->eval();
++
+   bool exit_app = false;
+-  int ret_code = simctrl.ParseCommandArgs(argc, argv, exit_app);
+-  if (exit_app) {
+-    return ret_code;
++  bool good_args = simctrl.ParseCommandArgs(argc, argv, exit_app);
++  if (!good_args || exit_app) {
++    return good_args ? 0 : 1;
+   }
+ 
+   std::cout << "Simulation of Ara" << std::endl
+@@ -44,5 +46,9 @@
+ 
+   simctrl.RunSimulation();
+ 
+-  return tb->dut().exit_o >> 1;
++  if (!Verilated::gotFinish()) {
++    std::cerr << "Simulation stopped before program completion" << std::endl;
++    return 1;
++  }
++  return 0;
+ }
+--- a/hardware/tb/ara_tb_verilator.sv
++++ b/hardware/tb/ara_tb_verilator.sv
+@@ -37,6 +37,19 @@
+     .exit_o(exit_o)
+   );
+ 
++  export "DPI-C" task simutil_memload;
++  task simutil_memload(input string file);
++    $readmemh(file, dut.i_ara_soc.i_dram.init_val);
++  endtask
++
++  export "DPI-C" function simutil_set_mem;
++  function int simutil_set_mem(input int index, input bit [511:0] value);
++    if (AxiWideDataWidth > 512 || index < 0 ||
++        index >= $size(dut.i_ara_soc.i_dram.init_val)) return 0;
++    dut.i_ara_soc.i_dram.init_val[index] = value[AxiWideDataWidth-1:0];
++    return 1;
++  endfunction
++
+   /*********
+    *  EOC  *
+    *********/
+@@ -44,14 +57,14 @@
+   always @(posedge clk_i) begin
+     if (exit_o[0]) begin
+       if (exit_o >> 1) begin
+-        $warning("Core Test ", $sformatf("*** FAILED *** (tohost = %0d)", (exit_o >> 1)));
++        $fatal(1, "Core Test failed (tohost = %0d)", (exit_o >> 1));
+       end else begin
+         // Print vector HW runtime
+         $display("[hw-cycles]: %d", int'(dut.runtime_buf_q));
+-        $info("Core Test ", $sformatf("*** SUCCESS *** (tohost = %0d)", (exit_o >> 1)));
++        $display("TEST PASSED");
+       end
+ 
+-      $finish(exit_o >> 1);
++      $finish;
+     end
+   end
+ 
+--- a/Bender.yml
++++ b/Bender.yml
+@@ -74,7 +74,6 @@
+     - target: ara_test
+       files:
+         # Level 1
+-        - hardware/deps/cva6/corev_apu/tb/common/mock_uart.sv
+         - hardware/tb/ara_testharness.sv
+         # Level 2
+         - hardware/tb/ara_tb.sv

@@ -1,0 +1,8 @@
+-p
+pulp_benchmark_cva6
+-t
+pulp_benchmark_cva6:simulation
+-t
+cv64a6_imafdc_sv39
+-t
+tech_cells_generic_exclude_deprecated

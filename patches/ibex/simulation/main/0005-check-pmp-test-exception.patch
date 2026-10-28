@@ -1,0 +1,40 @@
+--- a/examples/sw/simple_system/common/simple_system_common.c
++++ b/examples/sw/simple_system/common/simple_system_common.c
+@@ -120,7 +120,7 @@
+   return result;
+ }
+ 
+-void simple_exc_handler(void) {
++__attribute__((weak)) void simple_exc_handler(void) {
+   puts("EXCEPTION!!!\n");
+   puts("============\n");
+   puts("MEPC:   0x");
+--- a/examples/sw/simple_system/pmp_smoke_test/pmp_smoke_test.c
++++ b/examples/sw/simple_system/pmp_smoke_test/pmp_smoke_test.c
+@@ -5,6 +5,9 @@
+ // Basic smoke test for PMP. The test sets up a read-only PMP region then tries
+ // to write to it. It is intended for use with an external checking method (such
+ // as the Ibex co-simulation system) and does not report pass or fail.
++
++#include "simple_system_common.h"
++#include "simple_system_regs.h"
+ 
+ volatile unsigned int test_int = 10;
+ 
+@@ -22,5 +25,15 @@
+ 
+   test_int = 12;
+ 
+-  return 0;
++  return 1;
+ }
++
++// Accept only the intended PMP store fault; other exceptions remain failures.
++void simple_exc_handler(void) {
++  unsigned int cause, address;
++  __asm__ volatile("csrr %0, mcause" : "=r"(cause));
++  __asm__ volatile("csrr %0, mtval" : "=r"(address));
++  unsigned int failed = cause != 7 || address != (unsigned int)&test_int || test_int != 10;
++  DEV_WRITE(SIM_CTRL_BASE + SIM_CTRL_CTRL, 1 | (failed << 1));
++  while (1) {}
++}

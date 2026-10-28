@@ -1,0 +1,26 @@
+--- a/verif/verilator/new_trace_to_verilator.py
++++ b/verif/verilator/new_trace_to_verilator.py
+@@ -58,7 +58,8 @@
+     with open('%s/trace_parser_cmd_memory_model_command.log' % args.input, 'r') as memf:
+         for line in memf:
+             toks = line.split()
+-            assert toks[1] == 'PRI_MEM'
++            assert toks[1] in ('PRI_MEM', 'SEC_MEM')
++            assert bool(int(toks[2], 16) & 0x80000000) == (toks[1] == 'PRI_MEM')
+             if toks[0] == 'MEM_INIT_PATTERN':
+                 assert toks[4] == 'ALL_ZERO'
+                 trace.load_mem(int(toks[2], 16), b'\x00' * int(toks[3], 16))
+@@ -118,12 +119,12 @@
+             toks = line.split()
+             
+             assert toks[1] in syncpts
+-            assert toks[2] in ("1", "PRI_MEM") # memory_type
+             
+             if toks[0] == 'CHECK_NOTHING':
+                 trace.syncpt_check_nothing(syncpts[toks[1]])
+                 pass
+             elif toks[0] == 'CHECK_CRC':
++                assert toks[2] in ('1', 'PRI_MEM') # memory_type
+                 trace.syncpt_check_crc(syncpts[toks[1]], int(toks[3], 16), int(toks[4], 16), int(toks[5], 16))
+             else:
+                 raise ValueError(toks[0])

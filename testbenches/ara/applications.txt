@@ -1,0 +1,16 @@
+hello_world
+imatmul
+fmatmul
+iconv2d
+fconv2d
+fconv3d
+jacobi2d
+dropout
+fft
+dwt
+exp
+softmax
+dotproduct
+fdotproduct
+pathfinder
+lavamd

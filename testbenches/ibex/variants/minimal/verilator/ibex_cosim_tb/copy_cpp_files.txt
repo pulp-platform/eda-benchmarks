@@ -1,0 +1,11 @@
+main/vendor/lowrisc_ip/dv/verilator/cpp/dpi_memutil.cc
+main/vendor/lowrisc_ip/dv/verilator/cpp/mem_area.cc
+main/vendor/lowrisc_ip/dv/verilator/cpp/sv_scoped.cc
+main/vendor/lowrisc_ip/dv/verilator/cpp/verilator_memutil.cc
+main/vendor/lowrisc_ip/dv/verilator/simutil_verilator/cpp/verilated_toplevel.cc
+main/vendor/lowrisc_ip/dv/verilator/simutil_verilator/cpp/verilator_sim_ctrl.cc
+main/examples/simple_system/ibex_simple_system.cc
+main/dv/verilator/pcount/cpp/ibex_pcounts.cc
+main/dv/verilator/simple_system_cosim/simple_system_cosim.cc
+main/dv/cosim/spike_cosim.cc
+main/dv/cosim/cosim_dpi.cc

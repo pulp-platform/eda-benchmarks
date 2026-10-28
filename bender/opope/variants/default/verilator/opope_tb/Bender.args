@@ -1,0 +1,8 @@
+-t
+simulation
+-t
+rtl
+-t
+opope_hwpe
+-t
+cv32e40p_exclude_tracer

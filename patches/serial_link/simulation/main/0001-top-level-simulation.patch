@@ -1,0 +1,23 @@
+--- a/test/tb_axi_slink.sv
++++ b/test/tb_axi_slink.sv
+@@ -288,8 +288,8 @@
+ 
+   initial begin
+     automatic time start_cycle, end_cycle;
+-    automatic int unsigned data_sent = 0;
+-    automatic int unsigned data_received = 0;
++    static int unsigned data_sent = 0;
++    static int unsigned data_received = 0;
+     if ($value$plusargs("NUM_WRITES_1=%d", NumWrites_1)) begin
+       $info("[DDR1] Number of writes specified as %d", NumWrites_1);
+     end
+@@ -408,7 +408,8 @@
+       @(posedge clk_1);
+     end
+     $display("[SYS] Simulation Stopped (%d ns)", $time);
+-    $stop();
++    $display("TEST PASSED");
++    $finish;
+   endtask
+ 
+   task automatic cfg_write(apb_master_t drv, cfg_addr_t addr, cfg_data_t data, cfg_strb_t strb='1);

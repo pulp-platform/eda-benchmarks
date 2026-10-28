@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_spatz
+  name: pulp_benchmark_spatz
   authors:
     - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
@@ -7,4 +7,13 @@ package:
 dependencies:
   spatz: { path: "main" }
 
-sources: []
+sources:
+  - target: simulation
+    include_dirs:
+      - main/hw/ip/snitch_test/src
+      - ../../dependencies/common_cells/include
+      - ../../dependencies/axi/include
+      - ../../dependencies/register_interface/include
+    files:
+      - main/hw/ip/snitch_test/src/tb_memory_regbus.sv
+      - main/hw/ip/snitch_test/src/tb_memory_axi.sv

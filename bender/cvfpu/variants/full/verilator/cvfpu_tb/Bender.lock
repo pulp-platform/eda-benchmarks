@@ -1,0 +1,7 @@
+packages:
+  cvfpu_full_verification:
+    revision: null
+    version: null
+    source:
+      Path: ../../../../../../testbenches/cvfpu/build/host/full
+    dependencies: []

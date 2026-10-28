@@ -1,7 +1,7 @@
 // Copyright (c) 2026 ETH Zurich and University of Bologna.
 // SPDX-License-Identifier: Apache-2.0
 
-package oseda_bench_snitch_cluster_pkg;
+package pulp_benchmark_snitch_cluster_pkg;
   import snitch_cluster_wrapper_pkg::*;
 
   typedef struct packed {
@@ -41,7 +41,7 @@ endpackage
 `ifndef OSEDA_SNITCH_CLUSTER_PARENT_ONLY
 
 module snitch_cluster_synth
-  import oseda_bench_snitch_cluster_pkg::*;
+  import pulp_benchmark_snitch_cluster_pkg::*;
   import snitch_cluster_wrapper_pkg::*;
 (
   input  logic                     clk_i,
@@ -107,7 +107,7 @@ module snitch_cluster_synth
 endmodule
 
 module snitch_cluster_default_synth
-  import oseda_bench_snitch_cluster_pkg::*;
+  import pulp_benchmark_snitch_cluster_pkg::*;
   import snitch_cluster_wrapper_pkg::*;
 (
   input  logic                     clk_i,

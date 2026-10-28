@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_ara
+  name: pulp_benchmark_ara
   authors:
     - "Philippe Sauter <phsauter@iis.ee.ethz.ch>"
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
@@ -8,7 +8,11 @@ dependencies:
   ara: { path: "main" }
 
 sources:
-  include_dirs:
-    - ../../dependencies/axi/include
-  files:
-    - ara_synth.sv
+  - target: synthesis
+    include_dirs:
+      - ../../dependencies/axi/include
+    files:
+      - ara_synth.sv
+  - target: ara_test
+    files:
+      - ../../dependencies/cva6/corev_apu/tb/common/mock_uart.sv

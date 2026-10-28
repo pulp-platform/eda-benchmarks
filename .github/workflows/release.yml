@@ -1,4 +1,4 @@
-name: Release benchmarks
+name: Publish release
 
 on:
   push:
@@ -9,72 +9,40 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: package-release
   cancel-in-progress: false
 
 jobs:
-  release:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 60
+  publish:
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       VERSION: ${{ github.ref_name }}
-      PYTHON: /usr/bin/python3
-      JAVA: /usr/lib/jvm/java-17-openjdk-amd64/bin/java
-    defaults:
-      run:
-        shell: bash
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-          # setup.sh initializes only the required pinned submodules.
-          submodules: false
-
-      - name: Validate version tag
+      - name: Publish tested candidate
+        shell: bash
         run: |
-          if [[ ! $VERSION =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            printf 'Expected a release tag such as v1.0.0, got: %s\n' "$VERSION" >&2
+          version=$(cat VERSION)
+          [[ $version =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          if [[ $VERSION != "v$version" ]]; then
+            printf 'Release tag %s does not match VERSION (%s).\n' "$VERSION" "$version" >&2
             exit 1
           fi
-
-      - name: Install build prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            bash build-essential ca-certificates coreutils curl findutils \
-            gawk git libxml-simple-perl openjdk-17-jre-headless perl \
-            python3 python3-venv sed tar xz-utils
-
-      - name: Generate all benchmarks
-        run: ./setup.sh
-
-      - name: Package release
-        run: |
-          printf '%s\n' "$VERSION" > benchmarks/VERSION
-          git rev-parse HEAD > benchmarks/SOURCE_COMMIT
-          printf '%s\n' "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" > benchmarks/SOURCE_URL
-          package="pulp-benchmarks-${VERSION}"
-          mv benchmarks "$package"
-          archive="${package}.tar.gz"
-          tar --sort=name --owner=0 --group=0 --numeric-owner \
-            -czf "$archive" "$package"
-
-      - name: Publish release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          archive="pulp-benchmarks-${VERSION}.tar.gz"
-          if draft=$(gh release view "$VERSION" --json isDraft --jq '.isDraft' 2>/dev/null); then
-            if [[ $draft != true ]]; then
-              printf 'Release %s is already published.\n' "$VERSION" >&2
-              exit 1
-            fi
-          else
-            gh release create "$VERSION" --draft --verify-tag \
-              --title "$VERSION" --generate-notes
+          [[ $(gh release view "$VERSION" --json isDraft --jq '.isDraft') == true ]]
+          gh release download "$VERSION" --pattern source-tree.txt --dir "$RUNNER_TEMP/candidate"
+          if [[ $(cat "$RUNNER_TEMP/candidate/source-tree.txt") != "$(git rev-parse HEAD^{tree})" ]]; then
+            printf 'Release tag %s differs from the tested candidate. Prepare and test a new candidate.\n' "$VERSION" >&2
+            exit 1
           fi
-          gh release upload "$VERSION" "$archive" --clobber
-          gh release edit "$VERSION" --draft=false
+          gh release view "$VERSION" --json assets --jq '.assets[].name' \
+            | grep -Fx "pulp-benchmarks-${VERSION}.tar.gz"
+          gh release view "$VERSION" --json assets --jq '.assets[].name' \
+            | grep -Fx "pulp-benchmarks-${VERSION}-simulation.tar.gz"
+          gh release edit "$VERSION" --target "$GITHUB_SHA" --draft=false
+          gh release delete-asset "$VERSION" source-tree.txt --yes

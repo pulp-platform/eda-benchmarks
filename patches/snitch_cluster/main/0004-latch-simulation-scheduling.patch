@@ -1,0 +1,28 @@
+--- a/hw/snitch/src/snitch_regfile_latch.sv
++++ b/hw/snitch/src/snitch_regfile_latch.sv
+@@ -71,18 +74,22 @@
+   end
+ 
+   always_latch begin
+-    if (ZeroRegZero) mem[0] = '0;
++    if (ZeroRegZero) mem[0] <= '0;
+ 
+     for (int unsigned i = ZeroRegZero; i < NumWords; i++) begin : gen_read_words
+       for (int unsigned j = 0; j < NrWritePorts; j++) begin : gen_read_ports
+         if (mem_clocks[i]) begin
+           // TODO(zarubaf) generalize to more than 1 read port
+-          mem[i] = wdata_q[j];
++          mem[i] <= wdata_q[j];
+         end
+       end
+     end
+   end
+ 
+-  for (genvar i = 0; i < NrReadPorts; i++) assign rdata_o[i] = mem[raddr_i[i][AddrWidth-1:0]];
++  for (genvar i = 0; i < NrReadPorts; i++) assign
++`ifdef VERILATOR
++    #1ps
++`endif
++    rdata_o[i] = mem[raddr_i[i][AddrWidth-1:0]];
+ 
+ endmodule

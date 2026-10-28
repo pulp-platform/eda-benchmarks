@@ -1,0 +1,32 @@
+--- a/src/tb/ita_tb.sv
++++ b/src/tb/ita_tb.sv
+@@ -14,9 +14,9 @@
+   localparam time ACQ_DELAY           = 1600ps;
+   localparam unsigned RST_CLK_CYCLES  = 10;
+   // Set to 1 to run the simulation without stalls
+-  localparam unsigned CONT            = `ifdef NO_STALLS `NO_STALLS `else 0 `endif;
++  integer unsigned CONT            = `ifdef NO_STALLS `NO_STALLS `else 0 `endif;
+   // Set to 1 to run the simulation with single attention layer and linear layers
+-  localparam unsigned SINGLE_ATTENTION = `ifdef SINGLE_ATTENTION `SINGLE_ATTENTION `else 0 `endif;
++  integer unsigned SINGLE_ATTENTION = `ifdef SINGLE_ATTENTION `SINGLE_ATTENTION `else 0 `endif;
+   localparam unsigned ITERS           = 1;
+   localparam unsigned N_PHASES        = 7;
+ 
+@@ -76,6 +76,17 @@
+     EMBEDDING_SIZE = `ifdef EMBED_SIZE `EMBED_SIZE `else M_TILE_LEN `endif;
+     FEEDFORWARD_SIZE = `ifdef FF_SIZE `FF_SIZE `else M_TILE_LEN `endif;
+     ACTIVATION = activation_e'(`ifdef ACTIVATION `ACTIVATION `else Identity `endif);
++    void'($value$plusargs("SEQ_LENGTH=%d", SEQUENCE_LEN));
++    void'($value$plusargs("PROJ_SPACE=%d", PROJECTION_SPACE));
++    void'($value$plusargs("EMBED_SIZE=%d", EMBEDDING_SIZE));
++    void'($value$plusargs("FF_SIZE=%d", FEEDFORWARD_SIZE));
++    void'($value$plusargs("NO_STALLS=%d", CONT));
++    void'($value$plusargs("SINGLE_ATTENTION=%d", SINGLE_ATTENTION));
++    begin
++      int activation_value = int'(ACTIVATION);
++      void'($value$plusargs("ACTIVATION=%d", activation_value));
++      ACTIVATION = activation_e'(activation_value);
++    end
+ 
+     if (!$value$plusargs("stimuli=%s", simdir)) begin
+       simdir = {

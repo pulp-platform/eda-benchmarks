@@ -1,0 +1,114 @@
+--- a/target/sim/src/vip_cheshire_soc.sv
++++ b/target/sim/src/vip_cheshire_soc.sv
+@@ -363,7 +363,8 @@
+     if (read_elf(binary))
+       $fatal(1, "[JTAG] Failed to load ELF!");
+     while (get_section(sec_addr, sec_len)) begin
+-      byte bf[] = new [sec_len];
++      byte bf[1024];
++      if (sec_len > $size(bf)) $fatal(1, "ELF section exceeds preload buffer");
+       $display("[JTAG] Preloading section at 0x%h (%0d bytes)", sec_addr, sec_len);
+       if (read_section(sec_addr, bf, sec_len)) $fatal(1, "[JTAG] Failed to read ELF section!");
+       jtag_load_section(sec_addr, bf, sec_len);
+@@ -529,7 +530,8 @@
+         uart_boot_ena = 0;
+       end else if (bite == "\n") begin
+         if (uart_read_buf.size() > 0) begin
+-          line = {>>8{uart_read_buf}};
++          line = "";
++          foreach (uart_read_buf[i]) line = {line, uart_read_buf[i]};
+           $display("[UART] %s", line);
+           uart_read_buf.delete();
+         end else begin
+@@ -575,7 +577,8 @@
+     if (read_elf(binary))
+       $fatal(1, "[UART] Failed to load ELF!");
+     while (get_section(sec_addr, sec_len)) begin
+-      byte bf[] = new [sec_len];
++      byte bf[1024];
++      if (sec_len > $size(bf)) $fatal(1, "ELF section exceeds preload buffer");
+       $display("[UART] Preloading section at 0x%h (%0d bytes)", sec_addr, sec_len);
+       if (read_section(sec_addr, bf, sec_len)) $fatal(1, "[UART] Failed to read ELF section!");
+       // Write section in blocks
+@@ -632,6 +635,7 @@
+ 
+   // We connect 2 chips available at different addresses;
+   // however, the boot ROM will always boot from chip 0.
++`ifndef PULP_BENCHMARK_JTAG_ONLY
+   for (genvar i = 0; i < 2; i++) begin : gen_i2c_eeproms
+     M24FC1025 i_i2c_eeprom (
+       .RESET  ( rst_n ),
+@@ -679,6 +683,15 @@
+     if (image != "")
+       $readmemh(image, i_spi_norflash.Mem);
+   endtask
++
++`else
++  task automatic i2c_eeprom_preload(string image);
++    if (image != "") $fatal(1, "External boot images are unavailable");
++  endtask
++  task automatic spih_norflash_preload(string image);
++    if (image != "") $fatal(1, "External boot images are unavailable");
++  endtask
++`endif
+ 
+   ///////////////////
+   //  Serial Link  //
+@@ -936,8 +949,9 @@
+     if (read_elf(binary))
+       $fatal(1, "[SLINK] Failed to load ELF!");
+     while (get_section(sec_addr, sec_len)) begin
+-      byte bf[] = new [sec_len];
++      byte bf[1024];
+       int burst_len;
++      if (sec_len > $size(bf)) $fatal(1, "ELF section exceeds preload buffer");
+       $display("[SLINK] Preloading section at 0x%h (%0d bytes)", sec_addr, sec_len);
+       if (read_section(sec_addr, bf, sec_len)) $fatal(1, "[SLINK] Failed to read ELF section!");
+       // Write section in bursts <= SlinkBurstBytes that never cross a 4 KiB page
+@@ -1016,7 +1030,8 @@
+       $fatal(1, "[MEMH] Failed to load ELF!");
+ 
+     while (get_section(sec_addr, sec_len)) begin
+-      byte bf[] = new [sec_len];
++      byte bf[1024];
++      if (sec_len > $size(bf)) $fatal(1, "ELF section exceeds preload buffer");
+ 
+       $display("[MEMH] Preloading section at 0x%h (%0d bytes)", sec_addr, sec_len);
+       if (read_section(sec_addr, bf, sec_len)) $fatal(1, "[MEMH] Failed to read ELF section!");
+--- a/target/sim/src/tb_cheshire_soc.sv
++++ b/target/sim/src/tb_cheshire_soc.sv
+@@ -16,6 +16,11 @@
+     .UseDramSys   (UseDramSys)
+   ) fix();
+ 
++  initial begin
++    #10ms;
++    $fatal(1, "Testbench timeout");
++  end
++
+   string      preload_elf;
+   string      boot_hex;
+   logic [1:0] boot_mode;
+@@ -26,8 +31,13 @@
+     // Fetch plusargs or use safe (fail-fast) defaults
+     if (!$value$plusargs("BOOTMODE=%d", boot_mode))     boot_mode     = 0;
+     if (!$value$plusargs("PRELMODE=%d", preload_mode))  preload_mode  = 0;
+     if (!$value$plusargs("BINARY=%s",   preload_elf))   preload_elf   = "";
+     if (!$value$plusargs("IMAGE=%s",    boot_hex))      boot_hex      = "";
++
++`ifdef PULP_BENCHMARK_JTAG_ONLY
++    if (boot_mode != 0 || preload_mode != 0)
++      $fatal(1, "This recipe supports JTAG preload only");
++`endif
+ 
+     // Set boot mode and preload boot image if there is one
+     fix.vip.set_boot_mode(boot_mode);
+@@ -71,6 +81,8 @@
+     // Wait for the UART to finish reading the current byte
+     wait (fix.vip.uart_reading_byte == 0);
+ 
++    if (exit_code != 0) $fatal(1, "Program returned %0d", exit_code);
++    $display("TEST PASSED");
+     $finish;
+   end
+ 

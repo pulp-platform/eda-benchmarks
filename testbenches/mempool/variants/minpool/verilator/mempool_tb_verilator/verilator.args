@@ -1,0 +1,16 @@
+--cc
+--exe
+--build
+--assert
+--output-split
+5000
+--unroll-count
+256
+--autoflush
+--timescale
+1ns/1ns
+-Wno-BLKANDNBLK
+-CFLAGS
+-DTOPLEVEL_NAME=mempool_tb_verilator -DL2_BASE=2147483648 -DL2_SIZE=4194304 -DL2_BANKS=4 -DAXI_DATA_WIDTH=256
+-LDFLAGS
+-pthread -lutil -lelf

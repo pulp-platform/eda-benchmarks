@@ -1,0 +1,29 @@
+# Copyright (c) 2026 ETH Zurich and University of Bologna.
+# SPDX-License-Identifier: Apache-2.0
+
+ara.default.ara_tb_verilator.TOP := ara_tb_verilator
+cheshire.default.tb_cheshire_soc.TOP := tb_cheshire_soc
+cv32e40p.default.tb_top.TOP := tb_top
+cva6.default.ariane_tb.TOP := ariane_tb
+cvfpu.fp32_fma.cvfpu_tb.TOP := top
+cvfpu.full.cvfpu_tb.TOP := top
+ibex.full.ibex_cosim_tb.TOP := ibex_simple_system
+ibex.full.ibex_riscv_compliance_tb.TOP := ibex_riscv_compliance
+ibex.full.ibex_simple_system_tb.TOP := ibex_simple_system
+ibex.minimal.ibex_cosim_tb.TOP := ibex_simple_system
+ibex.minimal.ibex_riscv_compliance_tb.TOP := ibex_riscv_compliance
+ibex.minimal.ibex_simple_system_tb.TOP := ibex_simple_system
+ita.default.ita_tb.TOP := ita_tb
+mempool.mempool.mempool_tb_verilator.TOP := mempool_tb_verilator
+mempool.minpool.mempool_tb_verilator.TOP := mempool_tb_verilator
+mempool.terapool.mempool_tb_verilator.TOP := mempool_tb_verilator
+nvdla.top.trace.TOP := NV_nvdla
+opope.default.opope_tb.TOP := opope_tb
+pulp_c910.default.tb.TOP := tb
+redmule.default.redmule_tb.TOP := redmule_tb
+serial_link.default.tb_axi_slink.TOP := tb_axi_slink
+snitch_cluster.default.tb_bin.TOP := testharness
+snitch_cluster.default_latch.tb_bin.TOP := testharness
+snitch_cluster.minimal.tb_bin.TOP := testharness
+spatz.default.tb_bin.TOP := testharness
+spi_host.default.spi_host_tb.TOP := tb

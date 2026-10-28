@@ -1,0 +1,4 @@
+`verilator_config
+public -module "ibex_simple_system" -var "RV32E"
+public -module "ibex_simple_system" -var "RV32M"
+public -module "ibex_simple_system" -var "RV32B"

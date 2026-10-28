@@ -1,0 +1,22 @@
+--- a/hardware/src/lane/vector_regfile.sv
++++ b/hardware/src/lane/vector_regfile.sv
+@@ -61,7 +61,6 @@
+   /////////////
+ 
+   for (genvar bank = 0; bank < NrBanks; bank++) begin: gen_banks
+-`ifndef VERILATOR
+     // Clock gate
+     logic vrf_clk;
+     logic sram_active_q;
+@@ -73,11 +72,6 @@
+       .en_i     (req_i[bank] || sram_active_q),
+       .clk_o    (vrf_clk                     )
+     );
+-`else
+-    logic vrf_clk;
+-
+-    assign vrf_clk = clk_i;
+-`endif
+ 
+     tc_sram #(
+       .NumWords (NumWords ),

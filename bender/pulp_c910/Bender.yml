@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_pulp_c910
+  name: pulp_benchmark_pulp_c910
   authors:
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
 

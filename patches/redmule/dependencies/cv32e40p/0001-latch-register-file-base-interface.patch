@@ -1,0 +1,35 @@
+--- a/rtl/cv32e40p_register_file_latch.sv
++++ b/rtl/cv32e40p_register_file_latch.sv
+@@ -33,7 +33,10 @@
+     parameter ADDR_WIDTH = 5,
+     parameter DATA_WIDTH = 32,
+     parameter FPU        = 0,
+-    parameter PULP_ZFINX = 0
++    parameter PULP_ZFINX = 0,
++    parameter NUM_INTERRUPTS = 32,
++    parameter SHADOW = 0,
++    parameter ABI = "standard"
+ ) (
+     // Clock and Reset
+     input logic clk,
+@@ -62,8 +65,19 @@
+     // Write port W2
+     input logic [ADDR_WIDTH-1:0] waddr_b_i,
+     input logic [DATA_WIDTH-1:0] wdata_b_i,
+-    input logic                  we_b_i
++    input logic                  we_b_i,
++    input logic shadow_csr_save_i,
++    input logic [31:0] shadow_mepc_i,
++    input logic [$clog2(NUM_INTERRUPTS):0] shadow_mcause_i,
++    input logic shadow_save_i,
++    input logic [ADDR_WIDTH-1:0] shadow_raddr_i,
++    output logic [DATA_WIDTH-1:0] shadow_rdata_o,
++    output logic [DATA_WIDTH-1:0] shadow_sp_o
+ );
++
++  if (SHADOW) initial $fatal(1, "Shadow registers are unsupported by the latch register file");
++  assign shadow_rdata_o = '0;
++  assign shadow_sp_o = '0;
+ 
+   // number of integer registers
+   localparam NUM_WORDS = 2 ** (ADDR_WIDTH - 1);

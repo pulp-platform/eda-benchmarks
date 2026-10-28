@@ -1,0 +1,384 @@
+diff --git a/fpu_agent/fpu_sequences.svh b/fpu_agent/fpu_sequences.svh
+index 8980ca9..58f3196 100644
+--- a/fpu_agent/fpu_sequences.svh
++++ b/fpu_agent/fpu_sequences.svh
+@@ -59,11 +59,19 @@ class fpu_base_sequence extends uvm_sequence #(fpu_txn);
+     endfunction
+ 
+     function void set_fmt (input logic [1:0] fmt);
++`ifdef BENCH_FP32_FMA
++        this.fmt = 0;
++`else
+         this.fmt = fmt;
++`endif
+     endfunction
+ 
+     function void set_op_group (input int op_group_cfg);
++`ifdef BENCH_FP32_FMA
++        this.op_group_cfg = 0;
++`else
+         this.op_group_cfg = op_group_cfg;
++`endif
+     endfunction
+ 
+     function void set_num_txn(input int num_txn);
+diff --git a/fpu_agent/fpu_txn.svh b/fpu_agent/fpu_txn.svh
+index 5ee5ce9..a9fa0e2 100644
+--- a/fpu_agent/fpu_txn.svh
++++ b/fpu_agent/fpu_txn.svh
+@@ -97,6 +97,12 @@ class fpu_txn extends uvm_sequence_item;
+     // Randomization Constraints
+     // -------------------------------------------------------------------------
+     // Supported FP formats
++`ifdef BENCH_FP32_FMA
++    constraint exported_fma_c {
++      m_fmt == 0;
++      m_operation inside {FADD, FSUB, FMUL, FMADD, FMSUB, FNMADD, FNMSUB};
++    }
++`endif
+     constraint fp_fmt_c { m_fmt inside {0, 1, 2}; } 
+     
+     // Randomization ordering
+@@ -249,7 +255,7 @@ class fpu_txn extends uvm_sequence_item;
+ 
+     constraint fpu_operator_c { m_operation inside {[int'(FADD) : int'(FCLASS)]} ; }
+ 
+-    constraint m_req_tid_c   { !(m_trans_id inside {q_inflight_tid});}
++    constraint m_req_tid_c   { foreach (q_inflight_tid[i]) m_trans_id != q_inflight_tid[i];}
+ 
+     constraint m_nan_box_c { m_nan_box dist { 1 := 90, 0 := 10 }; }
+ 
+diff --git a/modules/cva6-cvfpu/cv64a60ax_config_pkg_cvfpu-uvm.sv b/modules/cva6-cvfpu/cv64a60ax_config_pkg_cvfpu-uvm.sv
+index 54db419..1af3a9c 100644
+--- a/modules/cva6-cvfpu/cv64a60ax_config_pkg_cvfpu-uvm.sv
++++ b/modules/cva6-cvfpu/cv64a60ax_config_pkg_cvfpu-uvm.sv
+@@ -66,7 +66,7 @@ package cva6_config_pkg;
+       RVZicntr: bit'(1),
+       RVZiCbom: bit'(1),
+       RVZihpm: bit'(1),
+-      NrScoreboardEntries: unsigned'(8),
++      NrScoreboardEntries: unsigned'(2),
+       PerfCounterEn: bit'(1),
+       MmuPresent: bit'(1),
+       RVS: bit'(1),
+diff --git a/modules/cva6-cvfpu/fpu_wrap.sv b/modules/cva6-cvfpu/fpu_wrap.sv
+index 17ca4ca..88b3be3 100644
+--- a/modules/cva6-cvfpu/fpu_wrap.sv
++++ b/modules/cva6-cvfpu/fpu_wrap.sv
+@@ -60,43 +60,6 @@ module fpu_wrap
+     localparam FMTBITS = $clog2(fpnew_pkg::NUM_FP_FORMATS);
+     localparam IFMTBITS = $clog2(fpnew_pkg::NUM_INT_FORMATS);
+ 
+-    // Features (enabled formats, vectors etc.)
+-    localparam fpnew_pkg::fpu_features_t FPU_FEATURES = '{
+-        Width: unsigned'(CVA6Cfg.FLen),  // parameterized using CVA6Cfg.FLen
+-        EnableVectors: CVA6Cfg.XFVec,
+-        EnableNanBox: 1'b1,
+-        FpFmtMask: {CVA6Cfg.RVF, CVA6Cfg.RVD, CVA6Cfg.XF16, CVA6Cfg.XF8, CVA6Cfg.XF16ALT},
+-        IntFmtMask: {
+-          CVA6Cfg.XFVec && CVA6Cfg.XF8,
+-          CVA6Cfg.XFVec && (CVA6Cfg.XF16 || CVA6Cfg.XF16ALT),
+-          1'b1,
+-          1'b1
+-        }
+-    };
+-
+-    // Implementation (number of registers etc)
+-    localparam fpnew_pkg::fpu_implementation_t FPU_IMPLEMENTATION = '{
+-        PipeRegs: '{  // FP32, FP64, FP16, FP8, FP16alt
+-            '{
+-                unsigned'(LAT_COMP_FP32),
+-                unsigned'(LAT_COMP_FP64),
+-                unsigned'(LAT_COMP_FP16),
+-                unsigned'(LAT_COMP_FP8),
+-                unsigned'(LAT_COMP_FP16ALT)
+-            },  // ADDMUL
+-            '{default: unsigned'(LAT_DIVSQRT)},  // DIVSQRT
+-            '{default: unsigned'(LAT_NONCOMP)},  // NONCOMP
+-            '{default: unsigned'(LAT_CONV)}
+-        },  // CONV
+-        UnitTypes: '{
+-            '{default: fpnew_pkg::PARALLEL},  // ADDMUL
+-            '{default: fpnew_pkg::MERGED},  // DIVSQRT
+-            '{default: fpnew_pkg::PARALLEL},  // NONCOMP
+-            '{default: fpnew_pkg::MERGED}
+-        },  // CONV
+-        PipeConfig: fpnew_pkg::DISTRIBUTED
+-    };
+-
+     //-------------------------------------------------
+     // Inputs to the FPU and protocol inversion buffer
+     //-------------------------------------------------
+@@ -529,13 +492,29 @@ module fpu_wrap
+     // FPU instance
+     //---------------
+ 
+-    fpnew_top #(
+-        .Features      (FPU_FEATURES),
+-        .Implementation(FPU_IMPLEMENTATION),
+-        .TagType       (logic [CVA6Cfg.TRANS_ID_BITS-1:0])
+-    ) i_fpnew_bulk (
++`ifdef BENCH_FP32_FMA
++    logic [31:0] fma_result;
++    logic [2:0] boxed;
++    logic [2:0][31:0] operands32;
++    for (genvar operand = 0; operand < 3; operand++) begin
++      assign operands32[operand] = fpu_operands[operand][31:0];
++      assign boxed[operand] = &fpu_operands[operand][63:32];
++    end
++    cvfpu_fp32_fma_synth i_fpnew_bulk (
++        .clk_i, .rst_ni, .operands_i(operands32), .is_boxed_i(boxed),
++        .rnd_mode_i(fpu_rm), .op_i(5'(fpu_op)), .op_mod_i(fpu_op_mod),
++        .tag_i(fpu_tag), .mask_i(1'b1), .aux_i(1'b0),
++        .in_valid_i(fpu_in_valid), .in_ready_o(fpu_in_ready), .flush_i,
++        .result_o(fma_result), .status_o(fpu_status), .extension_bit_o(),
++        .tag_o(fpu_trans_id_o), .mask_o(), .aux_o(),
++        .out_valid_o(fpu_out_valid), .out_ready_i(fpu_out_ready), .busy_o()
++    );
++    assign result_o = {32'hffffffff, fma_result};
++`else
++    cvfpu_full_synth i_fpnew_bulk (
+         .clk_i,
+         .rst_ni,
++        .hart_id_i     ('0),
+         .operands_i    (fpu_operands),
+         .rnd_mode_i    (fpnew_pkg::roundmode_e'(fpu_rm)),
+         .op_i          (fpnew_pkg::operation_e'(fpu_op)),
+@@ -545,7 +524,9 @@ module fpu_wrap
+         .int_fmt_i     (fpnew_pkg::int_format_e'(fpu_ifmt)),
+         .vectorial_op_i(fpu_vec_op),
+         .tag_i         (fpu_tag),
+-        .simd_mask_i   (1'b1),
++        .simd_mask_i   ('1),
++        .pace_param_i  ('0),
++        .pace_mode_i   ('0),
+         .in_valid_i    (fpu_in_valid),
+         .in_ready_o    (fpu_in_ready),
+         .flush_i,
+@@ -554,9 +535,10 @@ module fpu_wrap
+         .tag_o         (fpu_trans_id_o),
+         .out_valid_o   (fpu_out_valid),
+         .out_ready_i   (fpu_out_ready),
+-        .busy_o        (  /* unused */),
+-        .early_valid_o (fpu_early_valid_o)
++        .busy_o        (  /* unused */)
+     );
++`endif
++    assign fpu_early_valid_o = fpu_out_valid;
+ 
+     // Pack status flag into exception cause, tval ignored in wb, exception is always invalid
+     assign fpu_exception_o.cause = {59'h0, fpu_status};
+diff --git a/ref_model_csim/rtl/fpu_refmodel.svh b/ref_model_csim/rtl/fpu_refmodel.svh
+index 9ed19ce..cbb0584 100644
+--- a/ref_model_csim/rtl/fpu_refmodel.svh
++++ b/ref_model_csim/rtl/fpu_refmodel.svh
+@@ -50,7 +50,7 @@ class fpu_refmodel extends uvm_object;
+     bit                               is_signed;
+     bit                               int_format;
+     logic [2:0]                       src_fp_fmt;
+-    int unsigned                      INT_WIDTH, SRC_FP_WIDTH, DST_FP_WIDTH;
++    int unsigned                      integer_width, SRC_FP_WIDTH, DST_FP_WIDTH;
+     logic [CVA6Cfg.FLen-1:0]          int_mask, all_ones, fp_mask;
+     bit                               do_nothing, sign_extend_res;
+     bit                               op1_is_boxed, op2_is_boxed, op3_is_boxed;
+@@ -67,8 +67,8 @@ class fpu_refmodel extends uvm_object;
+     dst_env       = get_dest_env(fpnew_pkg::fp_format_e'(txn.fmt));
+     src_env       = get_src_env(txn.data.imm[2:0]);
+ 
+-    INT_WIDTH = int_format ? 64 : 32;
+-    int_mask  = (1 << INT_WIDTH) - 1;
++    integer_width = int_format ? 64 : 32;
++    int_mask  = (1 << integer_width) - 1;
+ 
+     src_fp_fmt = operator == FCVT_F2F ? txn.data.imm[2:0] : txn.fmt;
+ 
+diff --git a/ref_model_csim/rtl/fpu_refmodel_pkg.sv b/ref_model_csim/rtl/fpu_refmodel_pkg.sv
+index 4682494..b40e368 100644
+--- a/ref_model_csim/rtl/fpu_refmodel_pkg.sv
++++ b/ref_model_csim/rtl/fpu_refmodel_pkg.sv
+@@ -37,7 +37,7 @@ package fpu_refmodel_pkg;
+         MPFR_RNDNA  /*round to nearest away from zero*/
+     } mpfr_rnd_e;
+ 
+-    typedef struct {
++    typedef struct packed {
+         shortint bis; // Bit size of floating point number
+         byte     es;  // Exponent size of floating point number
+     } env_t;
+@@ -49,89 +49,89 @@ package fpu_refmodel_pkg;
+   `include "uvm_macros.svh"
+   `include "fpu_refmodel.svh"
+ 
+-  import "DPI-C" function int dpi_fadd(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fadd_flat = function int dpi_fadd(output bit [CVA6Cfg.FLen-1:0] result,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op2,
+                                         input  mpfr_rnd_e             rounding_mode,
+                                         input  env_t                  env);
+-  import "DPI-C" function int dpi_fsub(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fsub_flat = function int dpi_fsub(output bit [CVA6Cfg.FLen-1:0] result,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op2,
+                                         input  mpfr_rnd_e             rounding_mode,
+                                         input  env_t                  env);
+-  import "DPI-C" function int dpi_fmul(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fmul_flat = function int dpi_fmul(output bit [CVA6Cfg.FLen-1:0] result,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op2,
+                                         input  mpfr_rnd_e             rounding_mode,
+                                         input  env_t                  env);
+-  import "DPI-C" function int dpi_fdiv(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fdiv_flat = function int dpi_fdiv(output bit [CVA6Cfg.FLen-1:0] result,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op2,
+                                         input  mpfr_rnd_e             rounding_mode,
+                                         input  env_t                  env);
+-  import "DPI-C" function int dpi_fma(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fma_flat = function int dpi_fma(output bit [CVA6Cfg.FLen-1:0] result,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op2,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op3,
+                                         input  mpfr_rnd_e             rounding_mode,
+                                         input  env_t                  env);
+-  import "DPI-C" function int dpi_fnma(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fnma_flat = function int dpi_fnma(output bit [CVA6Cfg.FLen-1:0] result,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op2,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op3,
+                                         input  mpfr_rnd_e             rounding_mode,
+                                         input  env_t                  env);
+-  import "DPI-C" function int dpi_fms(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fms_flat = function int dpi_fms(output bit [CVA6Cfg.FLen-1:0] result,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op2,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op3,
+                                         input  mpfr_rnd_e             rounding_mode,
+                                         input  env_t                  env);
+-  import "DPI-C" function int dpi_fnms(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fnms_flat = function int dpi_fnms(output bit [CVA6Cfg.FLen-1:0] result,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op2,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op3,
+                                         input  mpfr_rnd_e             rounding_mode,
+                                         input  env_t                  env);
+-  import "DPI-C" function int dpi_fsqrt(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fsqrt_flat = function int dpi_fsqrt(output bit [CVA6Cfg.FLen-1:0] result,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op,
+                                         input  mpfr_rnd_e             rounding_mode,
+                                         input  env_t                  env);
+-  import "DPI-C" function int dpi_fcmp( output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fcmp_flat = function int dpi_fcmp( output bit [CVA6Cfg.FLen-1:0] result,
+ 										                    input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                         input  bit [CVA6Cfg.XLEN-1:0] op2,
+                                         input  mpfr_rnd_e             rounding_mode,
+                                         input  env_t                  env);
+-  import "DPI-C" function int dpi_fmin_max(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fmin_max_flat = function int dpi_fmin_max(output bit [CVA6Cfg.FLen-1:0] result,
+                                            input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                            input  bit [CVA6Cfg.XLEN-1:0] op2,
+                                            input  mpfr_rnd_e             rounding_mode,
+                                            input  env_t                  env);
+-  import "DPI-C" function int dpi_fsgnj(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fsgnj_flat = function int dpi_fsgnj(output bit [CVA6Cfg.FLen-1:0] result,
+                                            input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                            input  bit [CVA6Cfg.XLEN-1:0] op2,
+                                            input  mpfr_rnd_e             rounding_mode,
+                                            input  env_t                  env);
+-  import "DPI-C" function int dpi_fmv_f2x(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fmv_f2x_flat = function int dpi_fmv_f2x(output bit [CVA6Cfg.FLen-1:0] result,
+                                            input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                            input  env_t                  env,
+                                            input  int                    nchunks);
+-  import "DPI-C" function int dpi_fclass(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fclass_flat = function int dpi_fclass(output bit [CVA6Cfg.FLen-1:0] result,
+                                            input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                            input  env_t                  env);                                           
+-  import "DPI-C" function int dpi_fcvt_f2i(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fcvt_f2i_flat = function int dpi_fcvt_f2i(output bit [CVA6Cfg.FLen-1:0] result,
+                                            input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                            input  mpfr_rnd_e             rounding_mode,
+                                            input  env_t                  env,
+                                            input  int                    is_signed,
+                                            input  int                    int_format);
+-  import "DPI-C" function int dpi_fcvt_i2f(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fcvt_i2f_flat = function int dpi_fcvt_i2f(output bit [CVA6Cfg.FLen-1:0] result,
+                                            input  bit [CVA6Cfg.XLEN-1:0] op1,
+                                            input  mpfr_rnd_e             rounding_mode,
+                                            input  env_t                  env,
+                                            input  int                    is_signed,
+                                            input  int                    int_format);
+-  import "DPI-C" function int dpi_fcvt_f2f(output bit [CVA6Cfg.FLen-1:0] result,
++  import "DPI-C" dpi_fcvt_f2f_flat = function int dpi_fcvt_f2f(output bit [CVA6Cfg.FLen-1:0] result,
+                                            input  bit [CVA6Cfg.XLEN-1:0]  op1,
+                                            input  mpfr_rnd_e             rounding_mode,
+                                            input  env_t                  src_env,
+diff --git a/tests/base_test.svh b/tests/base_test.svh
+index df8124c..7ebfb62 100644
+--- a/tests/base_test.svh
++++ b/tests/base_test.svh
+@@ -197,4 +197,14 @@ class base_test extends uvm_test;
+ 
+     `uvm_info(get_full_name(), "Main phase complete", UVM_LOW)
+   endtask
++  virtual function void report_phase(uvm_phase phase);
++    uvm_report_server reports = uvm_report_server::get_server();
++    super.report_phase(phase);
++    if (!env.m_fpu_sb.all_done || env.m_fpu_sb.q_fpu_req.num() != 0)
++      `uvm_error("INCOMPLETE", "Scoreboard did not complete all expected responses")
++    if (reports.get_severity_count(UVM_ERROR) == 0 &&
++        reports.get_severity_count(UVM_FATAL) == 0)
++      $display("TEST PASSED");
++    else $fatal(1, "CVFPU scoreboard or UVM failure");
++  endfunction
+ endclass: base_test
+\ No newline at end of file
+diff --git a/tests/fpu_fmt_single_op_test.svh b/tests/fpu_fmt_single_op_test.svh
+index 850ec1d..eaa4570 100644
+--- a/tests/fpu_fmt_single_op_test.svh
++++ b/tests/fpu_fmt_single_op_test.svh
+@@ -47,7 +47,13 @@ class fpu_fmt_single_op_test extends base_test;
+       ariane_pkg::fu_op operation;
+       logic [1:0]       fmt;
+ 
+-	    std::randomize(operation) with { operation inside {FADD, FSUB, FMUL, FDIV, FSQRT, FMADD, FMSUB, FCMP, FMIN_MAX, FSGNJ, FCLASS, FCVT_I2F, FCVT_F2F, FNMADD, FNMSUB, FCVT_F2I, FMV_X2F, FMV_F2X} ; };
++      std::randomize(operation) with { operation inside {
++`ifdef BENCH_FP32_FMA
++        FADD, FSUB, FMUL, FMADD, FMSUB, FNMADD, FNMSUB
++`else
++        FADD, FSUB, FMUL, FDIV, FSQRT, FMADD, FMSUB, FCMP, FMIN_MAX, FSGNJ, FCLASS, FCVT_I2F, FCVT_F2F, FNMADD, FNMSUB, FCVT_F2I, FMV_X2F, FMV_F2X
++`endif
++      }; };
+       
+       fmt = $urandom_range(1); // Generate random format FP32/FP64
+ 
+diff --git a/tests/fpu_single_op_test.svh b/tests/fpu_single_op_test.svh
+index 642c215..87b7df8 100644
+--- a/tests/fpu_single_op_test.svh
++++ b/tests/fpu_single_op_test.svh
+@@ -46,7 +46,13 @@ class fpu_single_op_test extends base_test;
+ 
+       ariane_pkg::fu_op operation;
+ 
+-	    std::randomize(operation) with { operation inside {FADD, FSUB, FMUL, FDIV, FSQRT, FMADD, FMSUB, FCMP, FMIN_MAX, FSGNJ, FCLASS, FCVT_I2F, FCVT_F2F, FNMADD, FNMSUB, FCVT_F2I, FMV_X2F, FMV_F2X} ; };
++      std::randomize(operation) with { operation inside {
++`ifdef BENCH_FP32_FMA
++        FADD, FSUB, FMUL, FMADD, FMSUB, FNMADD, FNMSUB
++`else
++        FADD, FSUB, FMUL, FDIV, FSQRT, FMADD, FMSUB, FCMP, FMIN_MAX, FSGNJ, FCLASS, FCVT_I2F, FCVT_F2F, FNMADD, FNMSUB, FCVT_F2I, FMV_X2F, FMV_F2X
++`endif
++      }; };
+ 
+       // Create new sequence
+       m_seq = fpu_single_op_seq::type_id::create("seq");
+diff --git a/tests/fpu_test_pkg.sv b/tests/fpu_test_pkg.sv
+index e181b4c..a77551c 100644
+--- a/tests/fpu_test_pkg.sv
++++ b/tests/fpu_test_pkg.sv
+@@ -40,7 +40,6 @@ package fpu_test_pkg;
+   `include "fpu_unit_test.svh"
+   `include "fpu_op_group_test.svh"
+   `include "fpu_random_test.svh"
+-  `include "bug_f2i_test.svh"
+   `include "fpu_fmt_single_op_test.svh"
+   `include "fpu_fmt_op_group_test.svh"
+   `include "fpu_fmt_random_test.svh"

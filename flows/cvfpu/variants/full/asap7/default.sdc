@@ -15,6 +15,8 @@ set non_clock_inputs [get_ports {
   int_fmt_i
   vectorial_op_i
   simd_mask_i
+  pace_param_i
+  pace_mode_i
   tag_i
   in_valid_i
   flush_i
@@ -31,6 +33,8 @@ set_input_delay 100 -clock $clk_name [get_ports {
   int_fmt_i
   vectorial_op_i
   simd_mask_i
+  pace_param_i
+  pace_mode_i
   tag_i
   in_valid_i
   flush_i

@@ -1,5 +1,5 @@
 -p
-oseda_bench_snitch_cluster
+pulp_benchmark_snitch_cluster
 -t
 synthesis
 -t

@@ -7,4 +7,12 @@ bender/snitch_cluster/variants/*/snitch_cluster_wrapper_pkg.sv
 benchmarks/
 bender/bin/
 .venv/
+testbenches/*/build/
+testbenches/*/.preparation-key
+testbenches/*/downloads/
+testbenches/*/data/
 __pycache__/
+testbenches/*/tools/build/
+testbenches/*/tools/downloads/
+testbenches/*/tools/install/
+testbenches/*/variants/*/data/

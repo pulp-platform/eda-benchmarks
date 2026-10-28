@@ -1,0 +1,35 @@
+--- a/examples/sw/simple_system/common/crt0.S
++++ b/examples/sw/simple_system/common/crt0.S
+@@ -73,7 +73,9 @@
+ 
+   /* Halt simulation */
+   li x5, SIM_CTRL_BASE + SIM_CTRL_CTRL
+-  li x6, 1
++  snez x6, a0
++  slli x6, x6, 1
++  ori x6, x6, 1
+   sw x6, 0(x5)
+ 
+   /* If execution ends up here just put the core to sleep */
+--- a/examples/sw/simple_system/common/simple_system_common.c
++++ b/examples/sw/simple_system/common/simple_system_common.c
+@@ -130,7 +130,7 @@
+   puts("\nMTVAL:  0x");
+   puthex(get_mtval());
+   putchar('\n');
+-  sim_halt();
++  DEV_WRITE(SIM_CTRL_BASE + SIM_CTRL_CTRL, 3);
+ 
+   while(1);
+ }
+--- a/shared/rtl/sim/simulator_ctrl.sv
++++ b/shared/rtl/sim/simulator_ctrl.sv
+@@ -78,6 +78,8 @@
+           SIM_CTRL_ADDR: begin
+             if ((be_i[0] & wdata_i[0]) && (sim_finish == 'b0)) begin
+               $display("Terminating simulation by software request.");
++              if (wdata_i[31:1] != 0) $fatal(1, "Software reported failure");
++              $display("TEST PASSED");
+               sim_finish <= 3'b001;
+             end
+           end

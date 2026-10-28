@@ -1,0 +1,107 @@
+--- a/hw/dv/sv/spi_agent/spi_agent_pkg.sv
++++ b/hw/dv/sv/spi_agent/spi_agent_pkg.sv
+@@ -14,8 +14,8 @@
+ 
+   // parameter
+   parameter uint TPM_START_MAX_WAIT_TIME_NS = 10_000_000; // 10ms
+-  parameter uint CSB_WIDTH = 2;
+-  parameter uint NUM_CSB = CSB_WIDTH ** 2;
++  parameter uint CSB_WIDTH = 3;
++  parameter uint NUM_CSB = CSB_WIDTH;
+   parameter time TIME_SCK_STABLE_TO_CSB_NS = 10ns;
+   parameter uint TPM_ADDR_WIDTH      = 24;
+   parameter uint TPM_ADDR_WIDTH_BYTE = TPM_ADDR_WIDTH / 8;
+--- a/hw/ip/spi_host/dv/env/spi_host_env_cfg.sv
++++ b/hw/ip/spi_host/dv/env/spi_host_env_cfg.sv
+@@ -42,7 +42,7 @@
+ 
+ 
+   virtual function void initialize(bit [31:0] csr_base_addr = '1);
+-    list_of_alerts = spi_host_env_pkg::LIST_OF_ALERTS;
++    list_of_alerts = '{};
+     super.initialize(csr_base_addr);
+ 
+     // create spi_host agent config obj
+--- a/hw/ip/spi_host/dv/tb.sv
++++ b/hw/ip/spi_host/dv/tb.sv
+@@ -49,17 +49,41 @@
+ 
+   `DV_ALERT_IF_CONNECT()
+ 
++  pulp_benchmark_spi_host_pkg::reg_req_t reg_req;
++  pulp_benchmark_spi_host_pkg::reg_rsp_t reg_rsp;
++  logic reg_read, reg_write;
++  tlul_adapter_reg #(
++    .RegAw(32),
++    .RegDw(32),
++    .EnableRspIntgGen(1'b1),
++    .EnableDataIntgGen(1'b1)
++  ) adapter (
++    .clk_i(clk),
++    .rst_ni(rst_n),
++    .tl_i(tl_if.h2d),
++    .tl_o(tl_if.d2h),
++    .en_ifetch_i(prim_mubi_pkg::MuBi4False),
++    .intg_error_o(),
++    .re_o(reg_read),
++    .we_o(reg_write),
++    .addr_o(reg_req.addr),
++    .wdata_o(reg_req.wdata),
++    .be_o(reg_req.wstrb),
++    .busy_i(!reg_rsp.ready),
++    .rdata_i(reg_rsp.rdata),
++    .error_i(reg_rsp.error)
++  );
++  assign reg_req.valid = reg_read || reg_write;
++  assign reg_req.write = reg_write;
++  assign alert_tx = '0;
++  assign passthrough_o = '0;
++
+   // dut
+-  spi_host dut (
++  spi_host_synth dut (
+     .clk_i                (clk),
+     .rst_ni               (rst_n),
+ 
+-    // tl i/f
+-    .tl_i                 (tl_if.h2d),
+-    .tl_o                 (tl_if.d2h),
+-    // alerts
+-    .alert_rx_i           (alert_rx),
+-    .alert_tx_o           (alert_tx),
++    .reg_req_i(reg_req), .reg_rsp_o(reg_rsp),
+     // spi i/o
+     .cio_sck_o            (cio_sck_o),
+     .cio_sck_en_o         (cio_sck_en_o),
+@@ -68,9 +92,6 @@
+     .cio_sd_o             (cio_sd_o),
+     .cio_sd_en_o          (cio_sd_en_o),
+     .cio_sd_i             (cio_sd_i),
+-    // passthrough i/o
+-    .passthrough_i        (passthrough_i),
+-    .passthrough_o        (passthrough_o),
+     // intr i/f
+     .intr_error_o         (intr_error),
+     .intr_spi_event_o     (intr_event)
+--- a/hw/dv/sv/dv_utils/dv_test_status_pkg.sv
++++ b/hw/dv/sv/dv_utils/dv_test_status_pkg.sv
+@@ -18,7 +18,7 @@
+     prim_util_pkg::end_of_simulation = 1'b1;
+ `endif
+     if (passed) begin
+-      $display("\nTEST PASSED CHECKS");
++      $display("TEST PASSED");
+       $display(" _____         _                                  _ _ ");
+       $display("|_   _|__  ___| |_   _ __   __ _ ___ ___  ___  __| | |");
+       $display("  | |/ _ \\/ __| __| | '_ \\ / _` / __/ __|/ _ \\/ _` | |");
+--- a/hw/ip/spi_host/data/spi_host.hjson
++++ b/hw/ip/spi_host/data/spi_host.hjson
+@@ -47,7 +47,7 @@
+     { name: "NumCS",
+       desc: "The number of active-low chip select (cs_n) lines to create.",
+       type: "int",
+-      default: "1"
++      default: "3"
+     },
+     { name: "TxDepth",
+       desc: "The size of the Tx FIFO (in words)",

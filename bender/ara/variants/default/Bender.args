@@ -1,7 +1,7 @@
 -p
 ara
 -p
-oseda_bench_ara
+pulp_benchmark_ara
 -t
 rtl
 -t

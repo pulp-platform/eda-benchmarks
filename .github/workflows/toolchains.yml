@@ -1,0 +1,151 @@
+name: Prepare toolchains
+
+on:
+  workflow_dispatch:
+    inputs:
+      toolchain:
+        description: Toolchain to build
+        type: choice
+        options: [all, ara-gcc, ara-llvm, mempool-gcc, pulp-gcc, pulp-gcc-rv32imc, spatz-llvm]
+        default: all
+  workflow_call:
+    inputs:
+      toolchain:
+        type: string
+        default: all
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prepare-toolchains-${{ github.ref }}-${{ inputs.toolchain }}
+  cancel-in-progress: true
+
+jobs:
+  select:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - id: select
+        env:
+          TOOLCHAIN: ${{ inputs.toolchain }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          toolchains = {
+              'ara-gcc': {'installer': 'testbenches/ara/tools/gcc.sh'},
+              'ara-llvm': {'installer': 'testbenches/ara/tools/llvm.sh'},
+              'mempool-gcc': {'installer': 'testbenches/mempool/tools/gcc.sh'},
+              'pulp-gcc': {'installer': 'testbenches/common/tools/pulp-gcc.sh'},
+              'pulp-gcc-rv32imc': {'installer': 'testbenches/common/tools/pulp-gcc.sh', 'argument': 'rv32imc'},
+              'spatz-llvm': {'installer': 'testbenches/spatz/tools/llvm.sh'},
+          }
+          selected = os.environ['TOOLCHAIN']
+          entries = list(toolchains.values()) if selected == 'all' else [toolchains[selected]]
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('matrix=' + json.dumps({'include': entries}) + '\n')
+          PY
+  build:
+    needs: select
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: false
+      - name: Install compiler build dependencies
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake autotools-dev bison flex gawk build-essential cmake curl git libgmp-dev libmpfr-dev libmpc-dev libtool patchutils texinfo zlib1g-dev
+      - name: Identify toolchain
+        id: tool
+        env:
+          INSTALLER: ${{ matrix.installer }}
+          ARGUMENT: ${{ matrix.argument }}
+        run: |
+          args=()
+          [[ -z $ARGUMENT ]] || args=("$ARGUMENT")
+          printf 'name=%s\n' "$("$INSTALLER" --name "${args[@]}")" >> "$GITHUB_OUTPUT"
+      - name: Build toolchain
+        id: build
+        env:
+          INSTALLER: ${{ matrix.installer }}
+          ARGUMENT: ${{ matrix.argument }}
+        run: |
+          args=()
+          [[ -z $ARGUMENT ]] || args=("$ARGUMENT")
+          install=$(JOBS="$(nproc)" KEEP_BUILD_TOOLS=0 TOOLCHAIN_WORK_DIR="$RUNNER_TEMP/toolchain-build" "$INSTALLER" "${args[@]}")
+          printf 'install=%s\n' "$install" >> "$GITHUB_OUTPUT"
+      - name: Package toolchain
+        env:
+          INSTALLER: ${{ matrix.installer }}
+          ARGUMENT: ${{ matrix.argument }}
+          INSTALL: ${{ steps.build.outputs.install }}
+          TOOL: ${{ steps.tool.outputs.name }}
+          SOURCE_REPOSITORY: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          provenance="$INSTALL/share/pulp-benchmarks-toolchain"
+          mkdir -p "$provenance"
+          printf '%s\n' "$TOOL" > "$provenance/VERSION"
+          printf '%s %s\n' "$INSTALLER" "$ARGUMENT" > "$provenance/INSTALLER"
+          git rev-parse HEAD > "$provenance/SOURCE_COMMIT"
+          cp LICENSE.Apache-2.0 "$provenance/"
+          for script in "$INSTALLER" "${INSTALLER%/*}/"build-*.sh testbenches/common/tools/build-*.sh testbenches/common/copy-licenses.sh testbenches/common/toolchain-cache.sh; do
+            [[ -f $script ]] || continue
+            cp --parents "$script" "$provenance/"
+          done
+          mkdir -p dist
+          case "$INSTALLER" in
+            testbenches/ara/tools/gcc.sh)
+              source_repository=https://github.com/riscv/riscv-gnu-toolchain.git
+              source_revision=5842fde8ee5bb3371643b60ed34906eff7a5fa31 ;;
+            testbenches/mempool/tools/gcc.sh)
+              source_repository=https://github.com/pulp-platform/pulp-riscv-gnu-toolchain.git
+              source_revision=c672266b7199f2d495a72e284af33fc974f42239 ;;
+            testbenches/common/tools/pulp-gcc.sh)
+              source_repository=https://github.com/pulp-platform/pulp-riscv-gnu-toolchain.git
+              source_revision=70acebe256fc49114b5f068fa79f03eb9affed09 ;;
+            *) source_repository=; source_revision= ;;
+          esac
+          {
+            printf 'Build recipe: %s/tree/%s/%s\n\n' "$SOURCE_REPOSITORY" "$GITHUB_SHA" "${INSTALLER%/*}"
+            printf 'Shared build scripts: %s/tree/%s/testbenches/common/tools\n\n' "$SOURCE_REPOSITORY" "$GITHUB_SHA"
+            if [[ -n $source_repository ]]; then
+              printf 'Compiler sources:\n\n```bash\n'
+              printf 'git clone --no-checkout %q compiler-source\ncd compiler-source\n' "$source_repository"
+              printf 'git checkout --detach %q\ngit submodule update --init --depth 1\n```\n\n' "$source_revision"
+            fi
+          } > "$RUNNER_TEMP/toolchain-source-notes.md"
+          cp "$RUNNER_TEMP/toolchain-source-notes.md" "$provenance/SOURCES.md"
+          archive="$TOOL-linux-x86_64.tar.gz"
+          compressor='gzip -1'
+          if [[ $INSTALLER == testbenches/ara/tools/llvm.sh ]]; then
+            archive="$TOOL-linux-x86_64.tar.xz"
+            compressor='xz -T0 -6'
+          fi
+          tar -C "$INSTALL" -I "$compressor" -cf "dist/$archive" .
+          rm -rf -- "$RUNNER_TEMP/toolchain-build"
+          (cd dist && sha256sum "$archive" > "$archive.sha256")
+      - name: Upload compiler to draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TOOL: ${{ steps.tool.outputs.name }}
+        run: |
+          tag="toolchain-$TOOL"
+          if draft=$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>/dev/null); then
+            if [[ $draft != true ]]; then
+              printf 'Compiler release %s must remain a draft.\n' "$tag" >&2
+              exit 1
+            fi
+          else
+            gh release create "$tag" --draft --target "$GITHUB_SHA" \
+              --title "$TOOL" --notes-file "$RUNNER_TEMP/toolchain-source-notes.md"
+          fi
+          gh release upload "$tag" dist/* --clobber

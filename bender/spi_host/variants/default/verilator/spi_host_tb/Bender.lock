@@ -1,0 +1,7 @@
+packages:
+  spi_host_verification:
+    revision: null
+    version: null
+    source:
+      Path: ../../../../../../testbenches/spi_host/build/host
+    dependencies: []

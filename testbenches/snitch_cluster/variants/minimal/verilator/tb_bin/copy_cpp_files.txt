@@ -1,0 +1,4 @@
+main/target/sim/tb/verilator_lib.cc
+main/target/sim/tb/common_lib.cc
+main/target/sim/tb/ipc.cc
+main/target/sim/tb/tb_bin.cc

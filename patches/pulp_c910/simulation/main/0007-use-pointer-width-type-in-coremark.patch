@@ -1,0 +1,12 @@
+--- a/vendor/thead_openc910/smart_run/tests/cases/coremark/core_portme.h
++++ b/vendor/thead_openc910/smart_run/tests/cases/coremark/core_portme.h
+@@ -79,7 +79,8 @@
+ typedef double ee_f32;
+ typedef unsigned char ee_u8;
+ typedef unsigned int ee_u32;
+-typedef ee_u32 ee_ptr_int;
++#include <stdint.h>
++typedef uintptr_t ee_ptr_int;
+ // typedef size_t ee_size_t;
+ typedef unsigned int ee_size_t;
+ 

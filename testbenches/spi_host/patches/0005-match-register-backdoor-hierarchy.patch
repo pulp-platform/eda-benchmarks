@@ -1,0 +1,11 @@
+--- a/hw/ip/spi_host/dv/env/spi_host_env_cfg.sv
++++ b/hw/ip/spi_host/dv/env/spi_host_env_cfg.sv
+@@ -44,6 +44,8 @@
+   virtual function void initialize(bit [31:0] csr_base_addr = '1);
+     list_of_alerts = '{};
+     super.initialize(csr_base_addr);
++    ral.set_hdl_path_root("tb.dut.i_spi_host", "BkdrRegPathRtl");
++    ral.set_hdl_path_root("tb.dut.i_spi_host", "BkdrRegPathRtlShadow");
+ 
+     // create spi_host agent config obj
+     m_spi_agent_cfg = spi_agent_cfg::type_id::create("m_spi_agent_cfg");

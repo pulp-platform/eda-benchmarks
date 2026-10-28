@@ -1,0 +1,21 @@
+--- a/sw/snRuntime/src/omp/kmp.c
++++ b/sw/snRuntime/src/omp/kmp.c
+@@ -5,6 +5,7 @@
+ #include "kmp.h"
+ 
+ #include <inttypes.h>  // for PRIx##
++#include <stdarg.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ 
+--- a/sw/snRuntime/tests/dma_simple.c
++++ b/sw/snRuntime/tests/dma_simple.c
+@@ -9,7 +9,7 @@
+ uint32_t buffer[32];
+ 
+ int main() {
+-    if (snrt_global_core_idx() != 8) return 0;  // only DMA core
++    if (!snrt_is_dm_core()) return 0;  // only DMA core
+     uint32_t errors = 0;
+ 
+     // Populate buffers.

@@ -1,0 +1,615 @@
+diff --git a/hw/dv/sv/alert_esc_agent/alert_esc_agent.sv b/hw/dv/sv/alert_esc_agent/alert_esc_agent.sv
+index a510e82bf5..a6a7d7c9f9 100644
+--- a/hw/dv/sv/alert_esc_agent/alert_esc_agent.sv
++++ b/hw/dv/sv/alert_esc_agent/alert_esc_agent.sv
+@@ -19,7 +19,7 @@ class alert_esc_agent extends dv_base_agent#(
+ 
+   function void build_phase(uvm_phase phase);
+     alert_esc_agent_cfg cfg;
+-    if (!uvm_config_db#(CFG_T)::get(this, "", "cfg", cfg)) begin
++    if (!uvm_config_db#(alert_esc_agent_cfg)::get(this, "", "cfg", cfg)) begin
+       `uvm_fatal(`gfn, $sformatf("failed to get %s from uvm_config_db", cfg.get_type_name()))
+     end
+     // override monitor
+diff --git a/hw/dv/sv/alert_esc_agent/alert_esc_if.sv b/hw/dv/sv/alert_esc_agent/alert_esc_if.sv
+index db659db883..543e1a0b11 100644
+--- a/hw/dv/sv/alert_esc_agent/alert_esc_if.sv
++++ b/hw/dv/sv/alert_esc_agent/alert_esc_if.sv
+@@ -29,7 +29,8 @@ interface alert_esc_if(input clk, input rst_n);
+   wire                    async_clk;
+   bit                     is_async, is_alert, is_active;
+   dv_utils_pkg::if_mode_e if_mode;
+-  clk_rst_if              clk_rst_async_if(.clk(async_clk), .rst_n(rst_n));
++  wire async_rst_n = rst_n;
++  clk_rst_if              clk_rst_async_if(.clk(async_clk), .rst_n(async_rst_n));
+ 
+   // if alert sender is async mode, the clock will be drived in alert_esc_agent,
+   // if it is sync mode, will assign to dut clk here
+diff --git a/hw/dv/sv/cip_lib/cip_base_env_cov.sv b/hw/dv/sv/cip_lib/cip_base_env_cov.sv
+index 89efcd41e8..5ccb683b13 100644
+--- a/hw/dv/sv/cip_lib/cip_base_env_cov.sv
++++ b/hw/dv/sv/cip_lib/cip_base_env_cov.sv
+@@ -9,7 +9,7 @@ covergroup intr_cg (uint num_interrupts) with function sample(uint intr,
+                                                               bit intr_en,
+                                                               bit intr_state);
+   cp_intr: coverpoint intr {
+-    bins all_values[] = {[0:num_interrupts-1]};
++    bins all_values[] = {[0:31]} iff (intr < num_interrupts);
+   }
+   cp_intr_en: coverpoint intr_en;
+   cp_intr_state: coverpoint intr_state;
+@@ -21,7 +21,7 @@ covergroup intr_test_cg (uint num_interrupts) with function sample(uint intr,
+                                                                    bit intr_en,
+                                                                    bit intr_state);
+   cp_intr: coverpoint intr {
+-    bins all_values[] = {[0:num_interrupts-1]};
++    bins all_values[] = {[0:31]} iff (intr < num_interrupts);
+   }
+   cp_intr_test: coverpoint intr_test;
+   cp_intr_en: coverpoint intr_en;
+@@ -35,7 +35,7 @@ endgroup
+ covergroup intr_pins_cg (uint num_interrupts) with function sample(uint intr_pin,
+                                                                    bit  intr_pin_value);
+   cp_intr_pin: coverpoint intr_pin {
+-    bins all_pins[] = {[0:num_interrupts-1]};
++    bins all_pins[] = {[0:31]} iff (intr_pin < num_interrupts);
+   }
+   cp_intr_pin_value: coverpoint intr_pin_value {
+     bins values[] = {0, 1};
+--- a/hw/dv/sv/cip_lib/cip_base_scoreboard.sv
++++ b/hw/dv/sv/cip_lib/cip_base_scoreboard.sv
+@@ -80,34 +80,10 @@
+                           has_ro_mem);
+       end
+       if (cfg.en_tl_err_cov) begin
+-        tl_errors_cgs_wrap[ral_name] = new($sformatf("tl_errors_cgs_wrap[%0s]", ral_name));
+-        if (!has_csr) begin
+-          tl_errors_cgs_wrap[ral_name].tl_errors_cg.cp_csr_size_err.option.weight = 0;
+-        end
+-        if (!has_unmapped) begin
+-          tl_errors_cgs_wrap[ral_name].tl_errors_cg.cp_unmapped_err.option.weight = 0;
+-        end
+-        if (!has_mem_byte_access_err) begin
+-          tl_errors_cgs_wrap[ral_name].tl_errors_cg.cp_mem_byte_access_err.option.weight = 0;
+-        end
+-        if (!has_wo_mem) begin
+-          tl_errors_cgs_wrap[ral_name].tl_errors_cg.cp_mem_wo_err.option.weight = 0;
+-        end
+-        if (!has_ro_mem) begin
+-          tl_errors_cgs_wrap[ral_name].tl_errors_cg.cp_mem_ro_err.option.weight = 0;
+-        end
+-
++        `uvm_fatal("UNSUPPORTED_COVERAGE", "TL error coverage is unsupported")
+       end
+       if (cfg.en_tl_intg_err_cov) begin
+-        if (has_mem) begin
+-          tl_intg_err_mem_subword_cgs_wrap[ral_name] = new(
+-              $sformatf("tl_intg_err_mem_subword_cgs_wrap[%0s]", ral_name));
+-        end
+-
+-        tl_intg_err_cgs_wrap[ral_name] = new($sformatf("tl_intg_err_cgs_wrap[%0s]", ral_name));
+-        if (!has_mem || !has_csr) begin
+-          tl_intg_err_cgs_wrap[ral_name].tl_intg_err_cg.cp_is_mem.option.weight = 0;
+-        end
++        `uvm_fatal("UNSUPPORTED_COVERAGE", "TL integrity error coverage is unsupported")
+       end
+     end
+   endfunction
+diff --git a/hw/dv/sv/cip_lib/cip_base_test.sv b/hw/dv/sv/cip_lib/cip_base_test.sv
+index 89a09687c4..05ff25d1e6 100644
+--- a/hw/dv/sv/cip_lib/cip_base_test.sv
++++ b/hw/dv/sv/cip_lib/cip_base_test.sv
+@@ -17,7 +17,7 @@ class cip_base_test #(type CFG_T = cip_base_env_cfg,
+     void'($value$plusargs("create_jtag_riscv_map=%0b", create_jtag_riscv_map));
+     if (create_jtag_riscv_map) begin
+       // Demote address maps warnings
+-      msg = "\s*map .* does not seem to be initialized correctly.*";
++      msg = "\\s*map .* does not seem to be initialized correctly.*";
+       catcher.add_change_sev("RegModel", msg, UVM_INFO);
+     end
+   endfunction
+diff --git a/hw/dv/sv/cip_lib/seq_lib/cip_base_vseq.sv b/hw/dv/sv/cip_lib/seq_lib/cip_base_vseq.sv
+index 6ebf7b8481..8de34bfcab 100644
+--- a/hw/dv/sv/cip_lib/seq_lib/cip_base_vseq.sv
++++ b/hw/dv/sv/cip_lib/seq_lib/cip_base_vseq.sv
+@@ -242,6 +242,10 @@ class cip_base_vseq #(
+                              input                   mubi4_t instr_type = MuBi4False,
+                                                      tl_sequencer tl_sequencer_h = p_sequencer.tl_sequencer_h,
+                              input                   tl_intg_err_e tl_intg_err_type = TlIntgErrNone);
++    bit [BUS_DW-1:0] local_data = data;
++    bit local_completed, local_saw_err;
++    cip_tl_seq_item local_rsp;
++
+     `DV_SPINWAIT(
+         // thread to read/write tlul
+         cip_tl_host_single_seq tl_seq;
+@@ -255,37 +259,41 @@ class cip_base_vseq #(
+         tl_seq.req_abort_pct = req_abort_pct;
+         csr_utils_pkg::increment_outstanding_access();
+         `DV_CHECK_RANDOMIZE_WITH_FATAL(tl_seq,
+-            addr  == local::addr;
+-            write == local::write;
+-            mask  == local::mask;
+-            data  == local::data;)
++            tl_seq.addr  == local::addr;
++            tl_seq.write == local::write;
++            tl_seq.mask  == local::mask;
++            tl_seq.data  == local::local_data;)
+ 
+         `uvm_send_pri(tl_seq, 100)
+-        rsp = tl_seq.rsp;
++        local_rsp = tl_seq.rsp;
+ 
+         if (!write) begin
+-          data = rsp.d_data;
++          local_data = local_rsp.d_data;
+           if (check_exp_data && !cfg.under_reset) begin
+-            bit [BUS_DW-1:0] masked_data = data & compare_mask;
++            bit [BUS_DW-1:0] masked_data = local_data & compare_mask;
+             exp_data &= compare_mask;
+             `DV_CHECK_EQ(masked_data, exp_data, $sformatf("addr 0x%0h read out mismatch", addr))
+           end
+         end
+         if (check_rsp && !cfg.under_reset && tl_intg_err_type == TlIntgErrNone) begin
+-          `DV_CHECK_EQ(rsp.d_error, exp_err_rsp,
+-                       $sformatf("unexpected error response for addr: 0x%x", rsp.a_addr))
++          `DV_CHECK_EQ(local_rsp.d_error, exp_err_rsp,
++                       $sformatf("unexpected error response for addr: 0x%x", local_rsp.a_addr))
+         end
+ 
+         // Expose whether the transaction ran and whether it generated an error. Note that we
+         // probably only want to do a RAL update if it ran and caused no error.
+-        completed = rsp.rsp_completed;
+-        saw_err = rsp.d_error;
++        local_completed = local_rsp.rsp_completed;
++        local_saw_err = local_rsp.d_error;
+ 
+         csr_utils_pkg::decrement_outstanding_access();,
+         // thread to check timeout
+         $sformatf("Timeout waiting tl_access : addr=0x%0h", addr),
+         // Timeout parameter
+         tl_access_timeout_ns)
++    data = local_data;
++    completed = local_completed;
++    saw_err = local_saw_err;
++    rsp = local_rsp;
+   endtask
+ 
+   // CIP spec indicates all comportable IPs will have the same standardized interrupt csrs. We can
+diff --git a/hw/dv/sv/csr_utils/csr_utils_pkg.sv b/hw/dv/sv/csr_utils/csr_utils_pkg.sv
+index 907ec80261..b6b18a1131 100644
+--- a/hw/dv/sv/csr_utils/csr_utils_pkg.sv
++++ b/hw/dv/sv/csr_utils/csr_utils_pkg.sv
+@@ -339,9 +339,14 @@ package csr_utils_pkg;
+                             input  uint               timeout_ns = default_timeout_ns,
+                             input  uvm_reg_map        map = null,
+                             input  uvm_reg_frontdoor  user_ftdr = default_user_frontdoor);
++    uvm_reg_data_t read_value;
++    uvm_status_e read_status;
++
+     if (backdoor) begin
+-      csr_peek(ptr, value, check);
+-      status = UVM_IS_OK;
++      csr_peek(ptr, read_value, check);
++      read_status = UVM_IS_OK;
++      value = read_value;
++      status = read_status;
+       return;
+     end
+     fork
+@@ -355,16 +360,16 @@ package csr_utils_pkg;
+             csr_or_fld = decode_csr_or_field(ptr);
+             if (user_ftdr != null) csr_or_fld.csr.set_frontdoor(user_ftdr);
+             if (csr_or_fld.field != null) begin
+-              csr_or_fld.field.read(.status(status), .value(value), .path(path), .map(map),
++              csr_or_fld.field.read(.status(read_status), .value(read_value), .path(path), .map(map),
+                                     .prior(100));
+             end else begin
+-              csr_or_fld.csr.read(.status(status), .value(value), .path(path), .map(map),
++              csr_or_fld.csr.read(.status(read_status), .value(read_value), .path(path), .map(map),
+                                   .prior(100));
+             end
+             // TODO: need to remove the frontdoor to switch back to the default,
+             // but this doesn't work: if (user_ftdr != null) ptr.set_frontdoor(null);
+             if (check == UVM_CHECK && !under_reset) begin
+-              `DV_CHECK_EQ(status, UVM_IS_OK,
++              `DV_CHECK_EQ(read_status, UVM_IS_OK,
+                            $sformatf("trying to read csr/field %0s", ptr.get_full_name()),
+                            error, msg_id)
+             end
+@@ -379,6 +384,8 @@ package csr_utils_pkg;
+         disable fork;
+       end : isolation_fork
+     join
++    value = read_value;
++    status = read_status;
+   endtask
+ 
+   // backdoor read csr
+@@ -598,6 +605,8 @@ package csr_utils_pkg;
+                             input  uint               timeout_ns = default_timeout_ns,
+                             input  uvm_reg_map        map = null,
+                             input  uvm_reg_frontdoor  user_ftdr = default_user_frontdoor);
++    bit [31:0] read_data;
++
+     fork
+       begin : isolating_fork
+         uvm_status_e status;
+@@ -607,7 +616,7 @@ package csr_utils_pkg;
+           begin
+             increment_outstanding_access();
+             if (user_ftdr != null) ptr.set_frontdoor(user_ftdr);
+-            ptr.read(.status(status), .offset(offset), .value(data), .map(map), .prior(100));
++            ptr.read(.status(status), .offset(offset), .value(read_data), .map(map), .prior(100));
+             // TODO: need to remove the frontdoor to switch back to the default,
+             // but this doesn't work: if (user_ftdr != null) ptr.set_frontdoor(null);
+             if (check == UVM_CHECK && !under_reset) begin
+@@ -625,6 +634,7 @@ package csr_utils_pkg;
+         disable fork;
+       end : isolating_fork
+     join
++    data = read_data;
+   endtask : mem_rd_sub
+ 
+   task automatic mem_wr(input uvm_mem             ptr,
+diff --git a/hw/dv/sv/sec_cm/sec_cm_base_if_proxy.sv b/hw/dv/sv/sec_cm/sec_cm_base_if_proxy.sv
+index 8175cf5870..07aabdc3e4 100644
+--- a/hw/dv/sv/sec_cm/sec_cm_base_if_proxy.sv
++++ b/hw/dv/sv/sec_cm/sec_cm_base_if_proxy.sv
+@@ -9,6 +9,6 @@ virtual class sec_cm_base_if_proxy extends uvm_object;
+ 
+   `uvm_object_new
+ 
+-  pure virtual task automatic inject_fault();
+-  pure virtual task automatic restore_fault();
++  pure virtual task inject_fault();
++  pure virtual task restore_fault();
+ endclass
+diff --git a/hw/dv/sv/spi_agent/seq_lib/spi_device_cmd_rsp_seq.sv b/hw/dv/sv/spi_agent/seq_lib/spi_device_cmd_rsp_seq.sv
+index a77662305b..d207d5f724 100644
+--- a/hw/dv/sv/spi_agent/seq_lib/spi_device_cmd_rsp_seq.sv
++++ b/hw/dv/sv/spi_agent/seq_lib/spi_device_cmd_rsp_seq.sv
+@@ -47,7 +47,11 @@ class spi_device_cmd_rsp_seq extends spi_device_seq;
+       // Block here until the monitor sends a new seq_item, or we end the transaction.
+       fork begin: iso_fork
+         fork
+-          get_nxt_req(item);
++          begin
++            spi_item next_item;
++            get_nxt_req(next_item);
++            item = next_item;
++          end
+           begin
+             // If CSB goes inactive, cleanup then go back to waiting for the next txn
+             @(posedge cfg.vif.csb[0]);
+diff --git a/hw/dv/sv/spi_agent/spi_agent_cfg.sv b/hw/dv/sv/spi_agent/spi_agent_cfg.sv
+index 5adc8135b5..557a3c6383 100644
+--- a/hw/dv/sv/spi_agent/spi_agent_cfg.sv
++++ b/hw/dv/sv/spi_agent/spi_agent_cfg.sv
+@@ -130,11 +130,13 @@ class spi_agent_cfg extends dv_base_agent_cfg;
+   // TODO use  dv_utils_pkg::endian_swap_byte_arr() if possible
+   virtual function void swap_byte_order(ref logic [7:0] data[$]);
+     bit [7:0] data_arr[];
+-    data_arr = data;
++    data_arr = new[data.size()];
++    foreach (data_arr[i]) data_arr[i] = data[i];
+     `uvm_info(`gfn, $sformatf("\n  spi_agent_cfg, data_q_baseline: %p", data), UVM_DEBUG)
+     dv_utils_pkg::endian_swap_byte_arr(data_arr);
+     `uvm_info(`gfn, $sformatf("\n  spi_agent_cfg, data_q_swapped:  %p", data_arr), UVM_DEBUG)
+-    data = data_arr;
++    data.delete();
++    foreach (data_arr[i]) data.push_back(data_arr[i]);
+   endfunction : swap_byte_order
+ 
+   virtual function int get_sio_size();
+diff --git a/hw/dv/sv/tl_agent/seq_lib/tl_device_seq.sv b/hw/dv/sv/tl_agent/seq_lib/tl_device_seq.sv
+index 8a38d9a573..215b786b91 100644
+--- a/hw/dv/sv/tl_agent/seq_lib/tl_device_seq.sv
++++ b/hw/dv/sv/tl_agent/seq_lib/tl_device_seq.sv
+@@ -59,13 +59,14 @@ class tl_device_seq #(type REQ = tl_seq_item) extends dv_base_seq #(
+   //
+   // req: A req item retrieved from the TLM fifo and returned back to the caller.
+   protected virtual task get_a_chan_req(output REQ req);
++    REQ local_req;
+     fork
+       begin: isolation_thread
+         fork
+           begin
+             tl_seq_item item;
+             p_sequencer.a_chan_req_fifo.get(item);
+-            `downcast(req, item)
++            `downcast(local_req, item)
+           end
+           wait (stop);
+         join_any
+@@ -75,6 +76,7 @@ class tl_device_seq #(type REQ = tl_seq_item) extends dv_base_seq #(
+         disable fork;
+       end
+     join
++    req = local_req;
+   endtask
+ 
+   // A perpetually running task that collects and enqueues the incoming TL requests.
+diff --git a/hw/dv/sv/tl_agent/seq_lib/tl_host_seq.sv b/hw/dv/sv/tl_agent/seq_lib/tl_host_seq.sv
+index 4e956e2121..f730e0721d 100644
+--- a/hw/dv/sv/tl_agent/seq_lib/tl_host_seq.sv
++++ b/hw/dv/sv/tl_agent/seq_lib/tl_host_seq.sv
+@@ -12,7 +12,7 @@ class tl_host_seq #(type REQ_T = tl_seq_item) extends tl_host_base_seq #(REQ_T);
+   // chance to abort req
+   int               req_abort_pct = 0;
+ 
+-  REQ               pending_req[$];
++  REQ_T               pending_req[$];
+   int               min_req_delay = 0;
+   int               max_req_delay = 10;
+ 
+@@ -31,7 +31,7 @@ class tl_host_seq #(type REQ_T = tl_seq_item) extends tl_host_base_seq #(REQ_T);
+     fork
+       begin : wait_response_thread
+         for (int i = 0; i < req_cnt; i++) begin
+-          REQ req;
++          REQ_T req;
+           bit found_req;
+           get_response(rsp);
+           `uvm_info(`gfn, $sformatf("Received rsp[%0d] : %0s",
+@@ -55,7 +55,7 @@ class tl_host_seq #(type REQ_T = tl_seq_item) extends tl_host_base_seq #(REQ_T);
+       begin : request_thread
+         `uvm_info(`gfn, $sformatf("Start sending %0d host requests", req_cnt), UVM_HIGH)
+         for (int i = 0; i < req_cnt; i++) begin
+-          req = REQ::type_id::create("req");
++          req = REQ_T::type_id::create("req");
+           pre_start_item(req);
+           start_item(req);
+           randomize_req(req, i);
+@@ -72,14 +72,14 @@ class tl_host_seq #(type REQ_T = tl_seq_item) extends tl_host_base_seq #(REQ_T);
+ 
+   // Invoked after creating the req and before invoking start_item(req). Suitable for inserting
+   // delays before start_item(). Example: avoid running out of source IDs.
+-  virtual task pre_start_item(REQ req);
++  virtual task pre_start_item(REQ_T req);
+   endtask
+ 
+   // Request randomization, override this function to do custom request generation. Invoked after
+   // start_item(). Not suitable for setting a_source, since that is handled in
+   // `tl_host_base_seq::finish_item()` instead, to facilitate late randomization when accesses are
+   // initiated from UVM RAL.
+-  virtual function void randomize_req(REQ req, int idx);
++  virtual function void randomize_req(REQ_T req, int idx);
+     if (!(req.randomize() with {
+         a_valid_delay inside {[min_req_delay:max_req_delay]};})) begin
+       `uvm_fatal(`gfn, "Cannot randomize req")
+@@ -87,13 +87,13 @@ class tl_host_seq #(type REQ_T = tl_seq_item) extends tl_host_base_seq #(REQ_T);
+   endfunction
+ 
+   // callback after randomize seq, extened seq can override it to handle some non-rand variables
+-  virtual function void post_randomize_req(REQ req, int idx);
++  virtual function void post_randomize_req(REQ_T req, int idx);
+     `DV_CHECK_MEMBER_RANDOMIZE_FATAL(req_abort_after_a_valid_len)
+     req.req_abort_after_a_valid_len = req_abort_after_a_valid_len;
+   endfunction
+ 
+   // A reserved function that can be extended to process response packet
+-  virtual function void process_response(REQ req, REQ rsp);
++  virtual function void process_response(REQ_T req, REQ_T rsp);
+   endfunction
+ 
+ endclass : tl_host_seq
+diff --git a/hw/dv/sv/tl_agent/seq_lib/tl_host_single_seq.sv b/hw/dv/sv/tl_agent/seq_lib/tl_host_single_seq.sv
+index 381cbd95d6..de458d56ab 100644
+--- a/hw/dv/sv/tl_agent/seq_lib/tl_host_single_seq.sv
++++ b/hw/dv/sv/tl_agent/seq_lib/tl_host_single_seq.sv
+@@ -24,7 +24,7 @@ class tl_host_single_seq #(type REQ_T = tl_seq_item) extends tl_host_seq #(REQ_T
+ 
+   constraint req_cnt_eq_1_c { req_cnt == 1; }
+ 
+-  virtual function void randomize_req(REQ req, int idx);
++  virtual function void randomize_req(REQ_T req, int idx);
+     if (!(req.randomize() with {
+         a_valid_delay inside {[min_req_delay:max_req_delay]};
+         a_data == data;
+diff --git a/hw/dv/sv/tl_agent/tl_agent_cov.sv b/hw/dv/sv/tl_agent/tl_agent_cov.sv
+index c995475024..7405ab3aee 100644
+--- a/hw/dv/sv/tl_agent/tl_agent_cov.sv
++++ b/hw/dv/sv/tl_agent/tl_agent_cov.sv
+@@ -21,7 +21,7 @@ covergroup max_outstanding_cg(string name, int max_outstanding, string path) wit
+   option.name         = {path, "::", name};
+ 
+   cp_num_of_outstanding: coverpoint num_outstanding {
+-    bins values[]  = {[1:max_outstanding]};
++    bins values[] = {[1:(1 << SourceWidth)]} iff (num_outstanding <= max_outstanding);
+   }
+ endgroup : max_outstanding_cg
+ 
+@@ -42,7 +42,7 @@ covergroup tl_a_chan_cov_cg(string name, int valid_source_width, string path) wi
+     bins others       = default;
+   }
+   cp_source: coverpoint item.a_source {
+-    bins valid_sources[] = {[0 : 2 << (valid_source_width - 1) - 1]};
++    bins valid_sources[] = {[0:(1 << SourceWidth)-1]} iff (item.a_source < (1 << valid_source_width));
+   }
+   cross cp_opcode, cp_mask, cp_size;
+ endgroup : tl_a_chan_cov_cg
+diff --git a/hw/dv/sv/tl_agent/tl_if.sv b/hw/dv/sv/tl_agent/tl_if.sv
+--- a/hw/dv/sv/tl_agent/tl_if.sv
++++ b/hw/dv/sv/tl_agent/tl_if.sv
+@@ -20,7 +20,16 @@
+ 
+   clocking host_cb @(posedge clk);
+     input  rst_n;
+-    output h2d_int;
++    output a_valid = h2d_int.a_valid;
++    output a_opcode = h2d_int.a_opcode;
++    output a_param = h2d_int.a_param;
++    output a_size = h2d_int.a_size;
++    output a_source = h2d_int.a_source;
++    output a_address = h2d_int.a_address;
++    output a_mask = h2d_int.a_mask;
++    output a_data = h2d_int.a_data;
++    output a_user = h2d_int.a_user;
++    output d_ready = h2d_int.d_ready;
+     input  d2h;
+   endclocking
+   modport host_mp(clocking host_cb);
+diff --git a/hw/dv/sv/tl_agent/tl_host_driver.sv b/hw/dv/sv/tl_agent/tl_host_driver.sv
+--- a/hw/dv/sv/tl_agent/tl_host_driver.sv
++++ b/hw/dv/sv/tl_agent/tl_host_driver.sv
+@@ -105,15 +105,15 @@
+ 
+       if (!reset_asserted) begin
+         pending_a_req.push_back(req);
+-        cfg.vif.host_cb.h2d_int.a_address <= req.a_addr;
+-        cfg.vif.host_cb.h2d_int.a_opcode  <= tl_a_op_e'(req.a_opcode);
+-        cfg.vif.host_cb.h2d_int.a_size    <= req.a_size;
+-        cfg.vif.host_cb.h2d_int.a_param   <= req.a_param;
+-        cfg.vif.host_cb.h2d_int.a_data    <= req.a_data;
+-        cfg.vif.host_cb.h2d_int.a_mask    <= req.a_mask;
+-        cfg.vif.host_cb.h2d_int.a_user    <= req.a_user;
+-        cfg.vif.host_cb.h2d_int.a_source  <= req.a_source;
+-        cfg.vif.host_cb.h2d_int.a_valid   <= 1'b1;
++        cfg.vif.host_cb.a_address <= req.a_addr;
++        cfg.vif.host_cb.a_opcode  <= tl_a_op_e'(req.a_opcode);
++        cfg.vif.host_cb.a_size    <= req.a_size;
++        cfg.vif.host_cb.a_param   <= req.a_param;
++        cfg.vif.host_cb.a_data    <= req.a_data;
++        cfg.vif.host_cb.a_mask    <= req.a_mask;
++        cfg.vif.host_cb.a_user    <= req.a_user;
++        cfg.vif.host_cb.a_source  <= req.a_source;
++        cfg.vif.host_cb.a_valid   <= 1'b1;
+       end else begin
+         req_abort = 1;
+       end
+@@ -121,9 +121,9 @@
+       `DV_SPINWAIT_EXIT(send_a_request_body(req, a_valid_len, req_done, req_abort);,
+                         wait(reset_asserted);)
+ 
+-      // when reset and host_cb.h2d_int.a_valid <= 1 occur at the same time, if clock is off,
++      // when reset and host_cb.a_valid <= 1 occur at the same time, if clock is off,
+       // there is a race condition and invalidate_a_channel can't clear a_valid.
+-      if (reset_asserted) cfg.vif.host_cb.h2d_int.a_valid <= 1'b0;
++      if (reset_asserted) cfg.vif.host_cb.a_valid <= 1'b0;
+       invalidate_a_channel();
+     end
+     seq_item_port.item_done();
+@@ -151,7 +151,7 @@
+       end else if ((req.req_abort_after_a_valid_len || cfg.allow_a_valid_drop_wo_a_ready) &&
+                    a_valid_cnt >= a_valid_len) begin
+         if (req.req_abort_after_a_valid_len) req_abort = 1;
+-        cfg.vif.host_cb.h2d_int.a_valid <= 1'b0;
++        cfg.vif.host_cb.a_valid <= 1'b0;
+         // remove unaccepted item
+         void'(pending_a_req.pop_back());
+         invalidate_a_channel();
+@@ -173,9 +173,9 @@
+       `DV_SPINWAIT_EXIT(repeat (d_ready_delay) @(cfg.vif.host_cb);,
+          wait(!cfg.host_can_stall_rsp_when_a_valid_high && cfg.vif.h2d_int.a_valid))
+ 
+-      cfg.vif.host_cb.h2d_int.d_ready <= 1'b1;
++      cfg.vif.host_cb.d_ready <= 1'b1;
+       @(cfg.vif.host_cb);
+-      cfg.vif.host_cb.h2d_int.d_ready <= 1'b0;
++      cfg.vif.host_cb.d_ready <= 1'b0;
+     end
+   endtask : d_ready_rsp
+ 
+diff --git a/hw/ip/spi_host/dv/env/spi_host_env_pkg.sv b/hw/ip/spi_host/dv/env/spi_host_env_pkg.sv
+--- a/hw/ip/spi_host/dv/env/spi_host_env_pkg.sv
++++ b/hw/ip/spi_host/dv/env/spi_host_env_pkg.sv
+@@ -55,18 +55,18 @@
+   } spi_segment_type_e;
+ 
+   // spi config
+-  typedef struct {
++  typedef struct packed {
+     // configopts register fields
+-    rand bit        cpol[SPI_HOST_NUM_CS];
+-    rand bit        cpha[SPI_HOST_NUM_CS];
+-    rand bit        fullcyc[SPI_HOST_NUM_CS];
+-    rand bit [3:0]  csnlead[SPI_HOST_NUM_CS];
+-    rand bit [3:0]  csntrail[SPI_HOST_NUM_CS];
+-    rand bit [3:0]  csnidle[SPI_HOST_NUM_CS];
+-    rand bit [15:0] clkdiv[SPI_HOST_NUM_CS];
++    rand bit [0:SPI_HOST_NUM_CS-1] cpol;
++    rand bit [0:SPI_HOST_NUM_CS-1] cpha;
++    rand bit [0:SPI_HOST_NUM_CS-1] fullcyc;
++    rand bit [0:SPI_HOST_NUM_CS-1] [3:0] csnlead;
++    rand bit [0:SPI_HOST_NUM_CS-1] [3:0] csntrail;
++    rand bit [0:SPI_HOST_NUM_CS-1] [3:0] csnidle;
++    rand bit [0:SPI_HOST_NUM_CS-1] [15:0] clkdiv;
+   } spi_host_configopts_t;
+ 
+-  typedef struct {
++  typedef struct packed {
+     // csid register
+     rand bit [31:0] csid;
+     // control register fields
+@@ -82,7 +82,7 @@
+     Bidir    = 2'b11
+   } spi_dir_e;
+ 
+-  typedef struct {
++  typedef struct packed {
+     // command register fields
+     rand spi_mode_e mode;
+     rand spi_dir_e  direction;
+@@ -151,7 +151,7 @@
+ 
+   // alerts
+   parameter uint NUM_ALERTS = 1;
+-  parameter string LIST_OF_ALERTS[] = {"fatal_fault"};
++  parameter string LIST_OF_ALERTS[NUM_ALERTS] = '{"fatal_fault"};
+ 
+   // functions
+ 
+diff --git a/hw/ip/spi_host/dv/tb.sv b/hw/ip/spi_host/dv/tb.sv
+--- a/hw/ip/spi_host/dv/tb.sv
++++ b/hw/ip/spi_host/dv/tb.sv
+@@ -23,7 +23,6 @@
+   wire                          devmode;
+   wire [NUM_MAX_INTERRUPTS-1:0] interrupts;
+   wire [3:0]                    si_pulldown;
+-  wire [3:0]                    so_pulldown;
+ 
+   lc_tx_t                       scanmode_i;
+   logic                         cio_sck_o;
+@@ -44,7 +43,8 @@
+   pins_if #(1) devmode_if(devmode);
+   pins_if #(NUM_MAX_INTERRUPTS) intr_if(.pins(interrupts));
+   tl_if        tl_if(.clk(clk), .rst_n(rst_n));
+-  spi_if       spi_if(.rst_n(rst_n));
++  wire [3:0] spi_sio;
++  spi_if       spi_if(.rst_n(rst_n), .sio(spi_sio));
+   spi_passthrough_if       spi_passthrough_if(.rst_n(rst_n));
+ 
+   `DV_ALERT_IF_CONNECT()
+@@ -97,11 +97,10 @@
+   // configure spi_if i/o
+   assign spi_if.sck = (cio_sck_en_o) ? cio_sck_o : 1'bz;
+   for (genvar i = 0; i < 4; i++) begin : gen_tri_state
+-    pullup (weak1) pd_in_i (si_pulldown[i]);
+-    pullup (weak1) pd_out_i (so_pulldown[i]);
+-    assign spi_if.sio[i]  = (cio_sd_en_o[i]) ? cio_sd_o[i] : 'z;
+-    assign (highz0, pull1) spi_if.sio[i] = !cio_sd_en_o[i];
+-    assign si_pulldown[i] = spi_if.sio[i];
++    pullup pd_in_i (si_pulldown[i]);
++    assign spi_sio[i]  = (cio_sd_en_o[i]) ? cio_sd_o[i] : 'z;
++    pullup pu_sio (spi_sio[i]);
++    assign si_pulldown[i] = spi_sio[i];
+ 
+     assign spi_if.csb[i] = (i < NumCS && cio_csb_en_o[i]) ? cio_csb_o[i] : 1'b1;
+   end
+--- a/hw/dv/sv/common_ifs/clk_rst_if.sv
++++ b/hw/dv/sv/common_ifs/clk_rst_if.sv
+@@ -19,13 +19,11 @@
+   inout rst_n
+ );
+ 
+-`ifndef VERILATOR
+   // include macros and import pkgs
+   `include "dv_macros.svh"
+   `include "uvm_macros.svh"
+   import uvm_pkg::*;
+   import common_ifs_pkg::*;
+-`endif
+ 
+   // Enables clock to be generated and driven by this interface.
+   bit drive_clk;

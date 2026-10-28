@@ -1,5 +1,5 @@
 -p
-oseda_bench_opope
+pulp_benchmark_opope
 -t
 synthesis
 -D

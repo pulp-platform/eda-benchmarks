@@ -1,0 +1,13 @@
+--- a/sw/hal_opope.h
++++ b/sw/hal_opope.h
+@@ -15,8 +15,8 @@
+ #define OPOPE_ADDR_BASE OPOPE_BASE_ADD
+ #define OPOPE_ADDR_SPACE 0x00000100
+ 
+-#define HWPE_WRITE(value, offset) *(int *)(OPOPE_ADDR_BASE + offset) = value
+-#define HWPE_READ(offset) *(int *)(OPOPE_ADDR_BASE + offset)
++#define HWPE_WRITE(value, offset) *(volatile int *)(OPOPE_ADDR_BASE + offset) = value
++#define HWPE_READ(offset) *(volatile int *)(OPOPE_ADDR_BASE + offset)
+ 
+ static inline void opope_x_add_set(unsigned int value) {
+   HWPE_WRITE(value, OPOPE_REG_OFFS + OPOPE_REG_X_PTR);

@@ -1,5 +1,5 @@
 package:
-  name: oseda_bench_nvdla
+  name: pulp_benchmark_nvdla
   authors:
     - "Yukio Miyasaka <ymiyasaka@iis.ee.ethz.ch>"
 

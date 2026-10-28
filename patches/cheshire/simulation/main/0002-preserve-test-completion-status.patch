@@ -1,0 +1,16 @@
+--- a/sw/lib/crt0.S
++++ b/sw/lib/crt0.S
+@@ -129,8 +129,13 @@
+     ori  t0, t0, 1
+     la t1, __regs_base_addr__
+     sw t0, 8(t1)     // regs.SCRATCH[2]
++#ifdef PULP_BENCHMARK_STANDALONE_TEST
++1:  wfi
++    j 1b
++#else
+     // Hand over to whatever called us, passing return
+     ret
++#endif
+ 
+ // This wraps the C trap handler to save the (integer-only) caller-save
+ // registers and perform a proper machine-mode exception return.

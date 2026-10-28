@@ -1,0 +1,89 @@
+name: Yosys
+
+on:
+  workflow_dispatch:
+    inputs:
+      designs:
+        description: Space-separated design.variant targets
+        type: string
+        default: ibex.minimal ibex.full spi_host.default serial_link.default cv32e40p.default cvfpu.fp32_fma cvfpu.full cva6.default opope.default pulp_c910.default ita.default
+  workflow_call:
+    inputs:
+      designs:
+        type: string
+        default: ibex.minimal ibex.full spi_host.default serial_link.default cv32e40p.default cvfpu.fp32_fma cvfpu.full cva6.default opope.default pulp_c910.default ita.default
+
+permissions:
+  contents: read
+
+jobs:
+  select:
+    runs-on: ubuntu-24.04
+    outputs:
+      targets: ${{ steps.select.outputs.targets }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - id: select
+        env:
+          DESIGNS: ${{ inputs.designs }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, re
+          text = pathlib.Path('flows/targets.mk').read_text()
+          available = set(re.findall(r'^([a-z0-9_]+\.[a-z0-9_]+)\.TOP\s*:=', text, re.M))
+          targets = list(dict.fromkeys(os.environ['DESIGNS'].split()))
+          if not targets or any(target not in available for target in targets):
+              raise SystemExit('Choose valid design.variant targets from flows/targets.mk')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('targets=' + json.dumps(targets) + '\n')
+          PY
+  synthesize:
+    needs: select
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.select.outputs.targets) }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Download benchmark candidate
+        run: |
+          version="v$(cat VERSION)"
+          gh release download "$version" --pattern "pulp-benchmarks-${version}.tar.gz" --dir "$RUNNER_TEMP/candidate"
+          mkdir benchmarks
+          tar -xzf "$RUNNER_TEMP/candidate/pulp-benchmarks-${version}.tar.gz" --strip-components=1 -C benchmarks
+      - name: Install pinned Yosys and Slang
+        run: |
+          archive="$RUNNER_TEMP/oss-cad-suite.tgz"
+          curl -fL --retry 3 https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2026-10-26/oss-cad-suite-linux-x64-20261026.tgz -o "$archive"
+          printf '%s  %s\n' c0271052f5688834930c0788b547d26ea2d247eaf1f5a79d79e714bdcc64d4b8 "$archive" | sha256sum -c -
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          printf '%s\n' "$RUNNER_TEMP/oss-cad-suite/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/oss-cad-suite/bin/yosys" -V
+      - name: Prepare pinned ASAP7 libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends p7zip-full
+          technology=benchmarks/technologies/asap7/technology
+          git init "$technology"
+          git -C "$technology" remote add origin https://github.com/The-OpenROAD-Project/asap7sc7p5t_28.git
+          git -C "$technology" sparse-checkout init --cone
+          git -C "$technology" sparse-checkout set LIB/NLDM
+          git -C "$technology" fetch --depth 1 origin e5bd25da72cd297b8c0ec6f77600e0cbaa1124d0
+          git -C "$technology" checkout --detach FETCH_HEAD
+          for archive in "$technology"/LIB/NLDM/asap7sc7p5t_*_RVT_TT_nldm_*.lib.7z; do
+            7z e -y -o"$technology/LIB/NLDM" "$archive"
+          done
+      - name: Synthesize designs
+        run: make -C benchmarks yosys DESIGN="$TARGET" TECH=asap7 CHECK=0 INTRA_THREADS="$(nproc)"

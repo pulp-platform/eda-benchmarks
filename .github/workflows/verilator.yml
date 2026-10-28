@@ -1,0 +1,42 @@
+name: Verilator
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  target:
+    name: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: cv32e40p.default, parts: 1 }
+          - { target: opope.default, parts: 1 }
+          - { target: redmule.default, parts: 1 }
+          - { target: snitch_cluster.minimal, parts: 1 }
+          - { target: snitch_cluster.default, parts: 1 }
+          - { target: snitch_cluster.default_latch, parts: 1 }
+          - { target: pulp_c910.default, parts: 1 }
+          - { target: cheshire.default, parts: 1 }
+          - { target: cva6.default, parts: 4 }
+          - { target: spatz.default, parts: 4 }
+          - { target: ara.default, parts: 1 }
+          - { target: nvdla.top, parts: 1 }
+          - { target: ita.default, parts: 1 }
+          - { target: ibex.minimal, parts: 1 }
+          - { target: ibex.full, parts: 1 }
+          - { target: mempool.minpool, parts: 1 }
+          - { target: mempool.mempool, parts: 1 }
+          - { target: serial_link.default, parts: 4 }
+          - { target: mempool.terapool, parts: 4 }
+          - { target: cvfpu.full, parts: 8 }
+          - { target: cvfpu.fp32_fma, parts: 8 }
+          - { target: spi_host.default, parts: 8 }
+    uses: ./.github/workflows/verilator-target.yml
+    with:
+      target: ${{ matrix.target }}
+      parts: ${{ matrix.parts }}

@@ -1,0 +1,14 @@
+--- a/software/apps/baremetal/hello_world/main.c
++++ b/software/apps/baremetal/hello_world/main.c
+@@ -22,7 +22,10 @@
+     mempool_wfi();
+   }
+ 
+-  printf("Core %3d says Hello!\n", core_id);
++#ifdef PULP_BENCHMARK_QUIET_HELLO
++  if (core_id == 0 || core_id == num_cores - 1)
++#endif
++    printf("Core %3d says Hello!\n", core_id);
+   wake_up(core_id + 1);
+ 
+   // wait until all cores have finished

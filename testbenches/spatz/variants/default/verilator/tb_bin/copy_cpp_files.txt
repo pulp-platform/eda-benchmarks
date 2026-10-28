@@ -1,0 +1,3 @@
+main/hw/ip/snitch_test/src/verilator_lib.cc
+main/hw/ip/snitch_test/src/common_lib.cc
+main/hw/ip/snitch_test/src/tb_bin.cc

@@ -101,7 +101,7 @@ def stub_ram_model(path):
         r"\A(?:\s+|//[^\n]*(?:\n|$)|/\*.*?\*/)*", source, re.S
     ).group()
     lines = [
-        "// Modified by pulp-benchmarks: replaced the RAM implementation with a black box.",
+        "// Modified by the PULP benchmark suite.",
         original_header.rstrip(),
         "(* black_box, syn_black_box = 1 *)",
         "module {} (".format(target),

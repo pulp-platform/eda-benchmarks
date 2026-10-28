@@ -1,6 +1,6 @@
 -p
 serial_link
 -p
-oseda_bench_serial_link
+pulp_benchmark_serial_link
 -t
 synthesis

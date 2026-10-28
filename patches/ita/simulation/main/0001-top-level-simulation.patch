@@ -1,0 +1,175 @@
+--- a/src/tb/ita_tb.sv
++++ b/src/tb/ita_tb.sv
+@@ -77,20 +77,22 @@
+     FEEDFORWARD_SIZE = `ifdef FF_SIZE `FF_SIZE `else M_TILE_LEN `endif;
+     ACTIVATION = activation_e'(`ifdef ACTIVATION `ACTIVATION `else Identity `endif);
+ 
+-    simdir = {
+-      "../../simvectors/data_S",
+-      $sformatf("%0d", SEQUENCE_LEN),
+-      "_E",
+-      $sformatf("%0d", EMBEDDING_SIZE),
+-      "_P",
+-      $sformatf("%0d", PROJECTION_SPACE),
+-      "_F",
+-      $sformatf("%0d", FEEDFORWARD_SIZE),
+-      "_H1_B",
+-      $sformatf("%0d", `ifdef BIAS `BIAS `else 0 `endif),
+-      "_",
+-      $sformatf( "%s", ACTIVATION)
+-    };
++    if (!$value$plusargs("stimuli=%s", simdir)) begin
++      simdir = {
++        "../../simvectors/data_S",
++        $sformatf("%0d", SEQUENCE_LEN),
++        "_E",
++        $sformatf("%0d", EMBEDDING_SIZE),
++        "_P",
++        $sformatf("%0d", PROJECTION_SPACE),
++        "_F",
++        $sformatf("%0d", FEEDFORWARD_SIZE),
++        "_H1_B",
++        $sformatf("%0d", `ifdef BIAS `BIAS `else 0 `endif),
++        "_",
++        $sformatf( "%s", ACTIVATION)
++      };
++    end
+     N_TILES_SEQUENCE_DIM = SEQUENCE_LEN / M_TILE_LEN;
+     N_TILES_EMBEDDING_DIM = EMBEDDING_SIZE / M_TILE_LEN;
+     N_TILES_PROJECTION_DIM = PROJECTION_SPACE / M_TILE_LEN;
+@@ -151,24 +153,28 @@
+   return stim_fd;
+ endfunction
+ 
++function automatic integer read_stim(input integer fd);
++  integer value;
++  if ($fscanf(fd, "%d", value) != 1)
++    $fatal(1, "[TB] ITA: Invalid or truncated stimulus file");
++  return value;
++endfunction
++
+ task read_input(input integer fd);
+-  integer ret_code;
+   for (int i = 0; i < M_TILE_LEN; i++) begin
+-    ret_code = $fscanf(fd, "%d", inp[i]);
++    inp[i] = read_stim(fd);
+   end
+ endtask
+ 
+ task read_weight(input integer fd);
+-  integer ret_code;
+   for (int i = 0; i < N_PE; i++) begin
+-    ret_code = $fscanf(fd, "%d", inp_weight[i]);
++    inp_weight[i] = read_stim(fd);
+   end
+ endtask
+ 
+ task read_exp_resp(input integer fd);
+-  integer ret_code;
+   for (int i = 0; i < N_PE; i++) begin
+-    ret_code = $fscanf(fd, "%d", exp_res[i]);
++    exp_res[i] = read_stim(fd);
+   end
+ endtask
+ 
+@@ -203,7 +209,7 @@
+   if (!is_last_tile_inner_dim(phase, tile))
+     return;
+   for (int j = 0; j < N_PE; j++) begin
+-    ret_code = $fscanf(stim_fd_bias, "%d\n", inp_bias[j]);
++    inp_bias[j] = read_stim(stim_fd_bias);
+   end
+ endtask
+ 
+@@ -279,11 +285,11 @@
+   rqs_shift_fd = open_stim_file(activation_requant_shift_file);
+   add_fd = open_stim_file(activation_requant_add_file);
+ 
+-  return_code = $fscanf(b_fd, "%d", gelu_b);
+-  return_code = $fscanf(c_fd, "%d", gelu_c);
+-  return_code = $fscanf(rqs_mul_fd, "%d", activation_requant_mult);
+-  return_code = $fscanf(rqs_shift_fd, "%d", activation_requant_shift);
+-  return_code = $fscanf(add_fd, "%d", activation_requant_add);
++  gelu_b = read_stim(b_fd);
++  gelu_c = read_stim(c_fd);
++  activation_requant_mult = read_stim(rqs_mul_fd);
++  activation_requant_shift = read_stim(rqs_shift_fd);
++  activation_requant_add = read_stim(add_fd);
+ 
+   $fclose(b_fd);
+   $fclose(c_fd);
+@@ -411,9 +417,9 @@
+     stim_fd_add = open_stim_file("RQS_ATTN_ADD.txt");
+ 
+     for (int j = 0; j < N_ATTENTION_STEPS; j++) begin
+-      ret_code = $fscanf(stim_fd_mul, "%d\n", stim_eps_mult[j]);
+-      ret_code = $fscanf(stim_fd_shift, "%d\n", stim_right_shift[j]);
+-      ret_code = $fscanf(stim_fd_add, "%d\n", stim_add[j]);
++      stim_eps_mult[j] = read_stim(stim_fd_mul);
++      stim_right_shift[j] = read_stim(stim_fd_shift);
++      stim_add[j] = read_stim(stim_fd_add);
+     end
+ 
+     stim_fd_mul = open_stim_file("RQS_FFN_MUL.txt");
+@@ -421,9 +427,9 @@
+     stim_fd_add = open_stim_file("RQS_FFN_ADD.txt");
+ 
+     for (int j = 0; j < N_FEEDFORWARD_STEPS; j++) begin
+-      ret_code = $fscanf(stim_fd_mul, "%d\n", stim_eps_mult[j+N_ATTENTION_STEPS]);
+-      ret_code = $fscanf(stim_fd_shift, "%d\n", stim_right_shift[j+N_ATTENTION_STEPS]);
+-      ret_code = $fscanf(stim_fd_add, "%d\n", stim_add[j+N_ATTENTION_STEPS]);
++      stim_eps_mult[j+N_ATTENTION_STEPS] = read_stim(stim_fd_mul);
++      stim_right_shift[j+N_ATTENTION_STEPS] = read_stim(stim_fd_shift);
++      stim_add[j+N_ATTENTION_STEPS] = read_stim(stim_fd_add);
+     end
+ 
+     $fclose(stim_fd_mul);
+@@ -441,9 +447,18 @@
+     integer tile_entry;
+     integer group;
+     integer exp_resp_fd;
++    integer checked_outputs = 0;
++    integer expected_outputs;
+ 
+     $display("[TB] ITA: Checking outputs in phase %0d at %t.", phase, $time);
+ 
++    case (phase)
++      0, 1, 2: expected_outputs = SEQUENCE_LEN * PROJECTION_SPACE / N_PE;
++      3: expected_outputs = SEQUENCE_LEN * (SEQUENCE_LEN + PROJECTION_SPACE) / N_PE;
++      4, 6: expected_outputs = SEQUENCE_LEN * EMBEDDING_SIZE / N_PE;
++      5: expected_outputs = SEQUENCE_LEN * FEEDFORWARD_SIZE / N_PE;
++      default: $fatal(1, "Unexpected test phase %0d", phase);
++    endcase
+     group = 0;
+     tile_entry = 0;
+     input_file_index = 0;
+@@ -462,9 +477,10 @@
+       oup_valid_q = oup_valid;
+       oup_ready_q = oup_ready;
+       if (successful_handshake(oup_valid, oup_ready)) begin
++        checked_outputs += 1;
+         tile_entry += 1;
+         if (requant_oup !== exp_res) begin
+-          $display("[TB] ITA: Wrong value received %x, instead of %x at %t. (phase:  %0d)", requant_oup, exp_res, $time, phase);
++          $fatal(1, "[TB] ITA: Wrong value received %x, instead of %x at %t. (phase: %0d, output: %0d)", requant_oup, exp_res, $time, phase, checked_outputs);
+         end
+         if (!is_last_group(group) && phase == 3 && should_toggle_output(input_file_index, tile_entry)) begin
+             $display("[TB] ITA: %0d outputs were checked in phase %0d.",tile_entry, phase);
+@@ -475,6 +491,9 @@
+       is_end_of_input = $feof(exp_resp_fd);
+       end
+     end
++    if (checked_outputs != expected_outputs)
++      $fatal(1, "Phase %0d checked %0d outputs, expected %0d",
++             phase, checked_outputs, expected_outputs);
+     $fclose(exp_resp_fd);
+     $display("[TB] ITA: %0d outputs were checked in phase %0d.",tile_entry, phase);
+   endtask
+@@ -669,6 +688,7 @@
+     end
+ 
+     #(50*CLK_PERIOD);
++    $display("TEST PASSED");
+     $finish();
+   end
+ 

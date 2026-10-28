@@ -1,0 +1,3 @@
+main/hardware/tb/verilator/lowrisc_dv_verilator_memutil_dpi/cpp
+main/hardware/tb/verilator/lowrisc_dv_verilator_memutil_verilator/cpp
+main/hardware/tb/verilator/lowrisc_dv_verilator_simutil_verilator/cpp

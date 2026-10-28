@@ -1,0 +1,70 @@
+--- a/dv/riscv_compliance/rtl/ibex_riscv_compliance.sv
++++ b/dv/riscv_compliance/rtl/ibex_riscv_compliance.sv
+@@ -36,6 +36,8 @@
+   parameter bit ICacheScramble            = 1'b0;
+   parameter bit DbgTriggerEn              = 1'b0;
+ 
++  parameter int unsigned DbgHwBreakNum = 1;
++
+   logic clk_sys, rst_sys_n;
+ 
+   assign clk_sys = IO_CLK;
+@@ -158,6 +160,7 @@
+       .ICacheTweakInfection (ICacheTweakInfection),
+       .BranchPredictor      (BranchPredictor     ),
+       .DbgTriggerEn         (DbgTriggerEn        ),
++      .DbgHwBreakNum        (DbgHwBreakNum       ),
+       .SecureIbex           (SecureIbex          ),
+       .LockstepOffset       (LockstepOffset      ),
+       .ICacheScramble       (ICacheScramble      ),
+--- a/dv/riscv_compliance/rtl/riscv_testutil.sv
++++ b/dv/riscv_compliance/rtl/riscv_testutil.sv
+@@ -42,6 +42,26 @@
+   output logic [31:0] host_addr_o,
+   input        [31:0] host_rdata_i
+ );
++  // Compare every signature word before reporting success.
++  integer reference_fd, reference_count = 0, observed_count = 0, scan_result;
++  logic [31:0] reference_words [16384];
++  logic [31:0] reference_word;
++  string reference_path;
++  initial begin
++    if (!$value$plusargs("SIGNATURE_REFERENCE=%s", reference_path))
++      $fatal(1, "Missing SIGNATURE_REFERENCE");
++    reference_fd = $fopen(reference_path, "r");
++    if (!reference_fd) $fatal(1, "Cannot open %s", reference_path);
++    scan_result = $fscanf(reference_fd, "%h", reference_word);
++    while (scan_result == 1) begin
++      if (reference_count == 16384) $fatal(1, "Signature too large");
++      reference_words[reference_count++] = reference_word;
++      scan_result = $fscanf(reference_fd, "%h", reference_word);
++    end
++    if (!$feof(reference_fd) || reference_count == 0) $fatal(1, "Invalid signature file");
++    $fclose(reference_fd);
++  end
++
+   // ======= Bus device for interaction with software ======= //
+ 
+   localparam ADDR_HALT = 0;
+@@ -144,6 +164,9 @@
+ 
+       TERMINATE: begin
+         $display("Terminating simulation by software request.");
++        if (observed_count != reference_count)
++          $fatal(1, "Signature length: expected %0d, got %0d", reference_count, observed_count);
++        $display("TEST PASSED");
+         $finish;
+       end
+ 
+@@ -165,7 +188,10 @@
+       read_addr_q <= read_addr_d;
+ 
+       if (host_rvalid_i) begin
+-        $display("SIGNATURE: 0x%x", host_rdata_i);
++        if (observed_count >= reference_count || host_rdata_i !== reference_words[observed_count])
++          $fatal(1, "Signature mismatch at word %0d: expected %08x, got %08x",
++                 observed_count, reference_words[observed_count], host_rdata_i);
++        observed_count++;
+       end
+     end
+   end

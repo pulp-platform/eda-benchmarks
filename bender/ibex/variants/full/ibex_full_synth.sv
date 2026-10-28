@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 module ibex_full_synth
-  import oseda_bench_ibex_pkg::*;
+  import pulp_benchmark_ibex_pkg::*;
 (
   input  logic          clk_i,
   input  logic          rst_ni,

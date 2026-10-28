@@ -1,0 +1,23 @@
+--- a/hw/ip/spi_host/dv/env/seq_lib/spi_host_base_vseq.sv
++++ b/hw/ip/spi_host/dv/env/seq_lib/spi_host_base_vseq.sv
+@@ -203,13 +203,13 @@
+   // CONFIGOPTS register fields
+   virtual task program_configopt_regs();
+     for (int i = 0; i < SPI_HOST_NUM_CS; i++) begin
+-      ral.configopts[i].cpol.set(spi_config_regs.cpol[0]);
+-      ral.configopts[i].cpha.set(spi_config_regs.cpha[0]);
+-      ral.configopts[i].fullcyc.set(spi_config_regs.fullcyc[0]);
+-      ral.configopts[i].csnlead.set(spi_config_regs.csnlead[0]);
+-      ral.configopts[i].csntrail.set(spi_config_regs.csntrail[0]);
+-      ral.configopts[i].csnidle.set(spi_config_regs.csnidle[0]);
+-      ral.configopts[i].clkdiv.set(spi_config_regs.clkdiv[0]);
++      ral.configopts[i].cpol.set(spi_config_regs.cpol[i]);
++      ral.configopts[i].cpha.set(spi_config_regs.cpha[i]);
++      ral.configopts[i].fullcyc.set(spi_config_regs.fullcyc[i]);
++      ral.configopts[i].csnlead.set(spi_config_regs.csnlead[i]);
++      ral.configopts[i].csntrail.set(spi_config_regs.csntrail[i]);
++      ral.configopts[i].csnidle.set(spi_config_regs.csnidle[i]);
++      ral.configopts[i].clkdiv.set(spi_config_regs.clkdiv[i]);
+       csr_wr(ral.configopts[i], .value(ral.configopts[i].get()));
+     end
+   endtask : program_configopt_regs

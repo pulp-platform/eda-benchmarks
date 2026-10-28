@@ -1,0 +1,11 @@
+--- a/hardware/tb/mempool_tb_verilator.sv
++++ b/hardware/tb/mempool_tb_verilator.sv
+@@ -101,6 +101,8 @@
+   always_ff @(posedge clk) begin
+     if (rst_ni && eoc_valid) begin
+       $display("[EOC] Simulation ended at %t (retval = %0d).", $time, dut.i_ctrl_registers.eoc_o);
++      if (dut.i_ctrl_registers.eoc_o != 0) $fatal(1, "Program failed");
++      $display("TEST PASSED");
+       $finish;
+     end
+   end
