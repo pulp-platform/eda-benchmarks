@@ -84,7 +84,7 @@ jobs:
       - name: Download package
         run: |
           version="v$(cat VERSION)"
-          archive="pulp-benchmarks-${version}.tar.gz"
+          archive="pulp-benchmarks-${version}-simulation.tar.gz"
           gh release download "$version" --pattern "$archive" --dir "$RUNNER_TEMP/candidate"
           mkdir benchmarks
           tar -xzf "$RUNNER_TEMP/candidate/$archive" --strip-components=1 -C benchmarks
@@ -106,7 +106,7 @@ jobs:
           }
           gh release download "$RELEASE" --pattern "$ARCHIVE" --dir "$RUNNER_TEMP/simulators"
           tar -xzf "$RUNNER_TEMP/simulators/$ARCHIVE" -C benchmarks
-          package_archive="$RUNNER_TEMP/candidate/pulp-benchmarks-v$(cat VERSION).tar.gz"
+          package_archive="$RUNNER_TEMP/candidate/pulp-benchmarks-v$(cat VERSION)-simulation.tar.gz"
           expected=$(cat benchmarks/ci-simulator/package.sha256)
           [[ $(sha256sum "$package_archive" | cut -d ' ' -f1) == "$expected" ]] || {
             printf 'Package differs from the simulator build; rerun the build jobs.\n' >&2; exit 1;

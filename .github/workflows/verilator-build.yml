@@ -36,7 +36,7 @@ jobs:
       - name: Download package
         run: |
           version="v$(cat VERSION)"
-          archive="pulp-benchmarks-${version}.tar.gz"
+          archive="pulp-benchmarks-${version}-simulation.tar.gz"
           gh release download "$version" --pattern "$archive" --dir "$RUNNER_TEMP/candidate"
           mkdir benchmarks
           tar -xzf "$RUNNER_TEMP/candidate/$archive" --strip-components=1 -C benchmarks
@@ -73,7 +73,7 @@ jobs:
           TARGET: ${{ inputs.target }}
         run: |
           archive="simulator-${TARGET}.tar.gz"
-          package_archive="$RUNNER_TEMP/candidate/pulp-benchmarks-v$(cat VERSION).tar.gz"
+          package_archive="$RUNNER_TEMP/candidate/pulp-benchmarks-v$(cat VERSION)-simulation.tar.gz"
           python3 .github/scripts/package-simulator.py benchmarks "$TARGET" \
             "$package_archive" "$RUNNER_TEMP/$archive"
           printf 'archive=%s\n' "$archive" >> "$GITHUB_OUTPUT"

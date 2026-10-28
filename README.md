@@ -5,7 +5,15 @@ This repository prepares and exports RTL files of PULP and some external designs
 
 ## Get started
 
-Download the prepared benchmark tarball from the release's **Assets** on GitHub's [Releases page](../../releases). Extract it and run the commands below from the `pulp-benchmarks-v<version>/` directory. Automatic source-code archives do not contain the prepared RTL. Generating from source is not necessary for normal use.
+Download a prepared benchmark tarball from the release's **Assets** on GitHub's [Releases page](../../releases):
+
+- `pulp-benchmarks-v<version>.tar.gz`: RTL-only package for elaboration and synthesis.
+- `pulp-benchmarks-v<version>-simulation.tar.gz`: RTL plus testbenches, firmware, and simulation data.
+
+The simulation package is a superset of the RTL-only package; you only need one archive.
+
+Both archives extract to `pulp-benchmarks-v<version>/`. Extract the one you need into a fresh directory and run the commands below from there. Automatic source-code archives do not contain the prepared RTL. Generating from source is not necessary for normal use.
+
 
 <details>
 <summary>Generate from source</summary>
@@ -204,6 +212,8 @@ Synthesis outputs are written under `<design>/variants/<variant>/<technology>/`:
 
 
 ## Simulation tools
+
+Use the simulation archive for the commands in this section and the simulation flows below. The RTL-only archive omits the required testbenches, firmware, and data.
 
 Simulation requires Verilator, a C++ compiler, GNU Make, GNU `timeout`, Z3 (pinned version: 4.13.3), `libelf-dev`, MPFR/GMP development libraries, `pkg-config`, and lowRISC Spike (pinned commit: `aadf648`).
 

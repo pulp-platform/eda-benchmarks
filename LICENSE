@@ -1,23 +1,35 @@
 PULP BENCHMARK SUITE LICENSE NOTICE
 
-Repository-authored scripts, Bender manifests, and documentation are licensed
-under the Apache License, Version 2.0; see LICENSE.Apache-2.0, unless another
-license is explicitly identified.
+Repository-authored scripts, Bender manifests, testbench and simulation support
+code, and documentation are licensed under the Apache License, Version 2.0;
+see LICENSE.Apache-2.0, unless another license is explicitly identified.
 
-The generated benchmark package is an aggregation of independently developed
-hardware designs and supporting source code. No single license applies to that
-package as a whole.
+The generated benchmark packages aggregate independently developed components.
+The RTL-only package contains hardware designs and supporting source code.
+The simulation package additionally contains testbenches, simulation support
+code, compiled firmware, and simulation data. No single license applies to
+either package as a whole. Release archives identify their contents as rtl or
+simulation in PACKAGE_KIND.
 
 Each source tree remains subject to its original license terms. The applicable
 license and notice files are preserved alongside the corresponding sources in
-each design's main/ and dependencies/ directories. Individual source files may
-also carry SPDX license identifiers or copyright notices; those identifiers and
-notices govern those files.
+each design's main/ and dependencies/ directories. In the simulation package,
+licenses and notices for simulation support, firmware, and data are also
+included under each design's data/ and variants/<variant>/data/ directories.
+Associated README files describe provenance and toolchain versions. Individual
+source files may also carry SPDX license identifiers or copyright notices;
+those identifiers and notices govern those files.
+
+Third-party testbench code, firmware, runtime libraries, and simulation data
+remain subject to their respective licenses and notices. Their inclusion does
+not place them under the license for repository-authored code. Redistribution
+of each component remains subject to its applicable license and notice
+requirements.
 
 Benchmark wrapper files carrying the SPDX identifier Apache-2.0 are licensed
 under the Apache License, Version 2.0; see LICENSE.Apache-2.0. Support files
 carrying SHL-0.51 are licensed under the Solderpad Hardware License, Version
 0.51; see LICENSE.SHL-0.51.
 
-Nothing in this package changes, replaces, or broadens the license granted by
+Nothing in either package changes, replaces, or broadens the license granted by
 any upstream project or contributor.

@@ -46,22 +46,33 @@ jobs:
             gawk git libxml-simple-perl openjdk-17-jre-headless perl \
             python3 python3-venv sed tar xz-utils
 
+      - name: Generate and package RTL benchmarks
+        run: |
+          JOBS="$(nproc)" SIMULATION=0 KEEP_BUILD_TOOLS=0 ./setup.sh
+          cp VERSION benchmarks/VERSION
+          printf '%s\n' "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" > benchmarks/SOURCE_URL
+          printf 'rtl\n' > benchmarks/PACKAGE_KIND
+          package="pulp-benchmarks-${VERSION}"
+          mkdir -p dist/rtl
+          mv benchmarks "dist/rtl/$package"
+          tar --sort=name --owner=0 --group=0 --numeric-owner \
+            -czf "${package}.tar.gz" -C dist/rtl "$package"
+
       - name: Put firmware compilers on PATH
         run: .github/scripts/install-toolchains.sh all "$RUNNER_TEMP/firmware-compilers" >> "$GITHUB_PATH"
 
-      - name: Generate all benchmarks
-        run: JOBS="$(nproc)" KEEP_BUILD_TOOLS=0 ./setup.sh
-
-      - name: Package release
+      - name: Generate and package simulation benchmarks
         run: |
+          JOBS="$(nproc)" SIMULATION=1 KEEP_BUILD_TOOLS=0 ./setup.sh
           cp VERSION benchmarks/VERSION
           printf '%s\n' "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" > benchmarks/SOURCE_URL
-          git rev-parse HEAD^{tree} > source-tree.txt
+          printf 'simulation\n' > benchmarks/PACKAGE_KIND
           package="pulp-benchmarks-${VERSION}"
-          mv benchmarks "$package"
-          archive="${package}.tar.gz"
+          mkdir -p dist/simulation
+          mv benchmarks "dist/simulation/$package"
           tar --sort=name --owner=0 --group=0 --numeric-owner \
-            -czf "$archive" "$package"
+            -czf "${package}-simulation.tar.gz" -C dist/simulation "$package"
+          git rev-parse HEAD^{tree} > source-tree.txt
 
       - name: Prepare draft release
         env:
@@ -78,5 +89,6 @@ jobs:
             gh release create "$VERSION" --draft --target "$GITHUB_SHA" \
               --title "$VERSION" --generate-notes
           fi
-          gh release upload "$VERSION" "$archive" source-tree.txt --clobber
+          gh release upload "$VERSION" "$archive" \
+            "pulp-benchmarks-${VERSION}-simulation.tar.gz" source-tree.txt --clobber
 

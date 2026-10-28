@@ -42,5 +42,7 @@ jobs:
           fi
           gh release view "$VERSION" --json assets --jq '.assets[].name' \
             | grep -Fx "pulp-benchmarks-${VERSION}.tar.gz"
+          gh release view "$VERSION" --json assets --jq '.assets[].name' \
+            | grep -Fx "pulp-benchmarks-${VERSION}-simulation.tar.gz"
           gh release edit "$VERSION" --target "$GITHUB_SHA" --draft=false
           gh release delete-asset "$VERSION" source-tree.txt --yes
