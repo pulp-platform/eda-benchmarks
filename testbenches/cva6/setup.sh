@@ -49,5 +49,6 @@ cp "$tests/env/LICENSE" "$script_dir/data/ariane_tb/LICENSE.riscv-test-env"
 cp "$script_dir/build/fesvr/LICENSE" "$script_dir/data/ariane_tb/LICENSE.FESVR"
 printf '%s\n' "CVA6: $(git -C "$source_dir" rev-parse HEAD)" \
   "RISC-V tests: $tests_revision; original environment submodule; complete asm/amo/mul/fp CI lists" \
+  'Excluded: Spike trace comparison; upstream UVM regression (coverage code unsupported by the tested Verilator versions)' \
   "FESVR: $fesvr_revision" 'Compiler: Embecosm GCC 13.2.0, riscv32-gcc-ubuntu2204-release build 10, matching ci/install-toolchain.sh; freestanding RV64G/lp64 tests' \
   > "$script_dir/data/ariane_tb/README.txt"

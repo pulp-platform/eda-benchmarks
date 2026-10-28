@@ -56,6 +56,7 @@ cp "$root/testbenches/common/licenses/LICENSE.GCC-RUNTIME" "$script_dir/data/tb/
 cp "$root/testbenches/common/licenses/LICENSE.GPL3" "$script_dir/data/tb/LICENSE.GPL3"
 printf '%s\n' "PULP C910: $(git -C "$source_dir" rev-parse HEAD)" \
   'Programs: vendor hello_world, CoreMark (upstream two-iteration functional check), ISA/MMU/cache/CSR/exception/bus tests' \
+  'Excluded: debug, interrupt, and sleep testcases (required interfaces or peripherals absent from this integration)' \
   'Firmware: reset-ROM code at 0x02000000; cached-SPM data/stack at 0x10040000/0x100ee000' \
   'Startup omits MSMPR/MCCR2 accesses to the removed internal L2 controller' \
   'CoreMark license: EEMBC LICENSE.md, vendored by Ibex at 0c91314d1a4fdfc157d623ad5cb6ac5aef746db1' \

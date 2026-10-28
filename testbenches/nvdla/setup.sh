@@ -28,4 +28,5 @@ done
 cp "$source_dir/LICENSE" "$script_dir/data/trace/LICENSE.NVDLA"
 printf '%s\n' "NVDLA: $(git -C "$source_dir" rev-parse HEAD)" \
   'Configuration: nv_small_256_full; all matching upstream trace tests' \
+  'Excluded: upstream UVM testbench (UVMConnect interface unsupported by the tested Verilator versions)' \
   > "$script_dir/data/trace/README.txt"

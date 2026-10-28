@@ -13,5 +13,4 @@ softmax
 dotproduct
 fdotproduct
 pathfinder
-roi_align
 lavamd

@@ -17,6 +17,7 @@ cp "$root/deps/ibex/LICENSE" "$script_dir/data/ibex_simple_system_tb/LICENSE.Apa
 printf '%s\n' \
   "Ibex: $(git -C "$root/deps/ibex" rev-parse HEAD)" \
   'Program: examples/sw/simple_system/hello_test (RV32IMC/Zicsr, ILP32)' \
+  'Excluded: upstream UVM testbench (clocking declaration unsupported by the tested Verilator versions)' \
   'Toolchain: lowRISC GCC rv32imcb 20220210-1 (GCC 10.2.0); freestanding, no linked runtime libraries' \
   > "$script_dir/data/ibex_simple_system_tb/README.txt"
 

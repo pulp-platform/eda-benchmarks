@@ -45,6 +45,7 @@ for configuration in minpool mempool terapool; do
   sed -n '1,/^#include/p' "$source_dir/software/runtime/printf.c" > "$data/LICENSE.printf"
   printf '%s\n' "MemPool: $(git -C "$root/deps/mempool" rev-parse HEAD)" \
     "Programs: upstream baremetal/hello_world, CI baremetal/tests, and RTL ISA selection; configuration: $configuration" \
+    'Excluded: other baremetal and OpenMP test suites' \
     "Large configurations print only first/last core; all cores execute wake-up and barrier" \
     'Compiler: upstream PULP toolchain c672266b7199f2d495a72e284af33fc974f42239 (GCC 7.1.1); upstream ISA and tuning flags' \
     'Hardware retains XPULPIMG=1, ZFINX=1, ZQUARTERINX=0, XDIVSQRT=0' \

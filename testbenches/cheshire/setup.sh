@@ -29,5 +29,6 @@ cp "$root/testbenches/common/licenses/LICENSE.GCC-RUNTIME" "$script_dir/data/tb_
 cp "$root/testbenches/common/licenses/LICENSE.GPL3" "$script_dir/data/tb_cheshire_soc/LICENSE.GPL3"
 printf '%s\n' "Cheshire: $(git -C "$source_dir" rev-parse HEAD)" \
   'Upstream tests linked for SPM; JTAG preload; behavioral AXI memory; external boot peripherals omitted' \
+  'Excluded: AXI-RT and CLIC tests (features disabled); serial-link DMA test (no remote device and memory in the testbench)' \
   'Compiler: upstream riscv64-elf nightly 2023.03.14 (GCC 12.2.0); RV64GC/Zifencei, lp64d' \
   > "$script_dir/data/tb_cheshire_soc/README.txt"

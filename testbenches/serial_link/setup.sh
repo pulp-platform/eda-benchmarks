@@ -22,4 +22,5 @@ for reads1 in 0 100; do
 done
 printf '%s\n' "Serial Link: $(git -C "$root/deps/serial_link" rev-parse HEAD)" \
   'Upstream .gitlab-ci.yml: tb_axi_slink, NUM_CHANNELS=1, all 16 0/100 transaction combinations' \
+  'Excluded: upstream four-channel traffic and calibration tests; selection uses the one-channel testbench' \
   > "$script_dir/data/tb_axi_slink/README.txt"

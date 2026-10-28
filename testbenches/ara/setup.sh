@@ -62,6 +62,7 @@ printf '%s\n' \
   "Newlib: $(cat "$install/share/ara-testbench/NEWLIB_REVISION")" \
   'Scalar compiler: upstream riscv-gnu-toolchain 5842fde8ee5bb3371643b60ed34906eff7a5fa31' \
   'Selection: upstream ISA make lists and four-lane CI application matrix' \
+  'Excluded: roi_align (unresolved upstream licensing)' \
   'Ara configuration: 4_lanes (4 lanes, VLEN=4096)' \
   "Tests: ${tests[*]}" > "$script_dir/data/ara_tb_verilator/README.txt"
 printf 'Prepared %d Ara test programs in %s\n' "${#tests[@]}" "$script_dir/data/ara_tb_verilator"

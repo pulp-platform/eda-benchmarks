@@ -297,7 +297,7 @@ data/
 
 #### Ara
 
-The upstream C++ driver and CVA6-based harness run 272 ISA programs and 17 CI applications.
+The upstream C++ driver and CVA6-based harness run 272 ISA programs and 16 CI applications. `roi_align` is excluded because its upstream licensing remains unresolved.
 
 #### Cheshire
 
@@ -325,7 +325,7 @@ The package runs seven upstream standalone testcases and the identity testcase. 
 
 #### MemPool
 
-The package includes Hello World, the upstream CI matrix-multiplication testcase, and 126 RTL ISA programs for each variant. Other baremetal and OpenMP test suites are excluded. TeraPool has not yet been tested with all included testcases.
+The package includes Hello World, the upstream CI matrix-multiplication testcase, and 126 RTL ISA programs for each variant. Other baremetal and OpenMP test suites are excluded.
 
 #### NVDLA
 

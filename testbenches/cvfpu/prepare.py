@@ -46,6 +46,8 @@ for test in classes:
     'CORE-V helpers: 1dfa4836868fc2fc8e3754ee5c1c43fb42948aa3\n'
     'UVM: Accellera 1.1d; archive SHA256 b6f74e64dda5efa08e86dd15c22e921c404dd7d4eb4334ab62afe61fca0f6369\n'
     'Upstream VCS transaction count: 10; 50 fixed reseeds per available class.\n'
+    'Coverage: scalar FP32/FP64/FP16; fp32_fma is restricted to FP32 arithmetic.\n'
+    'Excluded: other formats and vector/PACE/dot-product operations.\n'
     'Skipped vectors: DIV/SQRT with improperly NaN-boxed operands; '
     'float-to-float conversion of infinity; integer-to-float overflow; '
     'FMA/add/multiply underflow rounding to the smallest normal value.\n'

@@ -31,4 +31,5 @@ sed -n '1,/notice and this notice are preserved/p' "$software/custom/link.ld" > 
 printf '%s\n' \
   "CV32E40P: $(git -C "$root/deps/cv32e40p" rev-parse HEAD)" \
   'Programs: example_tb/core custom/hello_world and interrupt/interrupt (RV32IMC, ILP32)' \
+  'Excluded: FP and hardware-loop tests (features disabled)' \
   'Toolchain: shared PULP GCC source 70acebe256fc49114b5f068fa79f03eb9affed09 (upstream recommends PULP GCC without a release pin)' > "$script_dir/data/tb_top/README.txt"

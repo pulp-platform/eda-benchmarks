@@ -72,4 +72,5 @@ if len(cases) != 84:
     "Compiler: upstream lowRISC GCC rv32imcb 20220210-1 (GCC 10.2.0), ISA specification 2.2; original CSR names.\n")
 for license_file in source.glob("COPYING*"):
     shutil.copyfile(license_file, output / ("LICENSE." + license_file.name))
+shutil.copyfile(source / "riscv-test-env/LICENSE", output / "LICENSE.riscv-test-env")
 (output / "LICENSE.sources.txt").write_text("\n\n".join(notices))

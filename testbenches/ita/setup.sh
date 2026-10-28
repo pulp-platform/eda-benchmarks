@@ -19,4 +19,5 @@ cp "$root/LICENSE.Apache-2.0" "$script_dir/data/ita_tb/"
 cp "$root/deps/ita/"LICENSE.* "$script_dir/data/ita_tb/"
 printf '%s\n' "ITA: $(git -C "$root/deps/ita" rev-parse HEAD)" \
   'Selection: upstream run_sim matrix plus the original identity activation case; seed 0' \
+  'Excluded: HWPE benches; selection uses the upstream standalone testbench' \
   > "$script_dir/data/ita_tb/README.txt"
