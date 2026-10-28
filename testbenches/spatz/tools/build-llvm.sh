@@ -34,6 +34,10 @@ if [[ ! -f $install/.setup-key || $(cat "$install/.setup-key") != "$setup_key" ]
     fi
     git -C "$source_dir" reset --hard "$revision" >/dev/null
     git -C "$source_dir" clean -fdx >/dev/null
+    sed -i '1i // Modified by the PULP benchmark suite: include <cstdint> for GCC 13.' \
+      "$source_dir/llvm/include/llvm/Support/Signals.h"
+    sed -i '/^#include <string>$/i #include <cstdint>' \
+      "$source_dir/llvm/include/llvm/Support/Signals.h"
     cmake -S "$source_dir/llvm" -B "$build" -G 'Unix Makefiles' \
       -DCMAKE_INSTALL_PREFIX="$install" -DCMAKE_BUILD_TYPE=Release \
       -DLLVM_OPTIMIZED_TABLEGEN=ON -DLLVM_ENABLE_PROJECTS='clang;lld' \
