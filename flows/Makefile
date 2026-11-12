@@ -26,7 +26,7 @@ include testbenches.mk
 target_family = $(word 1,$(subst ., ,$(1)))
 target_variant = $(word 2,$(subst ., ,$(1)))
 target_dir = $(call target_family,$(1))/variants/$(call target_variant,$(1))
-target_tech_dirs = $(wildcard $(call target_dir,$(1))/*/default.sdc)
+target_tech_dirs = $(wildcard $(call target_dir,$(1))/*/yosys.tcl)
 target_techs = $(notdir $(patsubst %/,%,$(dir $(call target_tech_dirs,$(1)))))
 TECHNOLOGIES := $(sort $(foreach target,$(TARGETS),$(call target_techs,$(target))))
 TECH ?=

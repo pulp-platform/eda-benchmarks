@@ -75,7 +75,7 @@ Prepared RTL, headers, variant-specific file lists, constraints, and flow script
   data/                         shared simulation support and test data
   variants/<variant>/
     *.sv                        benchmark top/wrapper sources
-    <technology>/default.sdc    technology-specific constraints
+    <technology>/default.sdc    technology-specific constraints (ASAP7 only)
     <technology>/yosys.tcl      technology-specific Yosys synthesis flow
     yosys-slang.args            Slang options shared by Yosys flows (optional)
     filelist.f                  file paths
@@ -215,7 +215,7 @@ git clone --depth 1 \
   technologies/gf180mcu_7t/technology
 ```
 
-Setup uses `liberty/gf180mcu_fd_sc_mcu7t5v0__tt_025C_5v00.lib` (TT, 25 °C, 5 V). Select this flow with `TECH=gf180mcu_7t`.
+Setup combines the header `liberty/gf180mcu_fd_sc_mcu7t5v0__tt_025C_5v00.lib` with matching per-cell files under `cells/` (TT, 25 °C, 5 V). The assembled Liberty file is written to the target’s `reports/yosys/` directory. Select this flow with `TECH=gf180mcu_7t`.
 
 </details>
 
@@ -236,7 +236,7 @@ git clone --depth 1 \
   technologies/gf180mcu_9t/technology
 ```
 
-Setup uses `liberty/gf180mcu_fd_sc_mcu9t5v0__tt_025C_5v00.lib` (TT, 25 °C, 5 V). Select this flow with `TECH=gf180mcu_9t`.
+Setup combines the header `liberty/gf180mcu_fd_sc_mcu9t5v0__tt_025C_5v00.lib` with matching per-cell files under `cells/` (TT, 25 °C, 5 V). The assembled Liberty file is written to the target’s `reports/yosys/` directory. Select this flow with `TECH=gf180mcu_9t`.
 
 </details>
 
@@ -260,6 +260,8 @@ git clone --depth 1 \
 Setup uses `libs.ref/StdCellLib/liberty/StdCellLib_nom.lib` (nominal core cells). This flow uses the C4M library rather than upstream IHP's `sg13g2_stdcell` library.
 
 </details>
+
+These technologies do not include SDC files. The Yosys synthesis flow performs cell mapping without reading timing constraints.
 
 </details>
 
@@ -466,5 +468,5 @@ OpenTitan’s verification environment is adapted to the PULP register bus using
 
 ### Physical design
 
-- No physical design flow is provided. Technology-specific SDC files are included with each variant, but the elaboration and Yosys synthesis flows do not read them. Synthesis performs cell mapping and structural validation; it does not establish timing closure.
+- No physical design flow is provided. ASAP7 SDC files are included with each variant, but the elaboration and Yosys synthesis flows do not read them. Synthesis performs cell mapping and structural validation; it does not establish timing closure.
 - SRAM macros are not provided in this package. Simulation uses behavioral memory implementations, whereas synthesis replaces them with black-box stubs. Specifically, the upstream `tc_sram` implementation is replaced with `tc_sram_blackbox`, and NVDLA's simulation RAM models are replaced with corresponding black boxes. Physical design requires SRAM macros with appropriate mappings and views, such as Liberty for physical synthesis and LEF/GDS for backend use.
