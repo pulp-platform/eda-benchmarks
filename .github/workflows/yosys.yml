@@ -7,11 +7,18 @@ on:
         description: Space-separated design.variant targets
         type: string
         default: ibex.minimal ibex.full spi_host.default serial_link.default cv32e40p.default cvfpu.fp32_fma cvfpu.full cva6.default opope.default pulp_c910.default ita.default
+      technologies:
+        description: Space-separated synthesis technologies
+        type: string
+        default: asap7 gf180mcu_7t gf180mcu_9t c4m-ihpsg13g2
   workflow_call:
     inputs:
       designs:
         type: string
         default: ibex.minimal ibex.full spi_host.default serial_link.default cv32e40p.default cvfpu.fp32_fma cvfpu.full cva6.default opope.default pulp_c910.default ita.default
+      technologies:
+        type: string
+        default: asap7 gf180mcu_7t gf180mcu_9t c4m-ihpsg13g2
 
 permissions:
   contents: read
@@ -21,6 +28,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       targets: ${{ steps.select.outputs.targets }}
+      technologies: ${{ steps.select.outputs.technologies }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -28,6 +36,7 @@ jobs:
       - id: select
         env:
           DESIGNS: ${{ inputs.designs }}
+          TECHNOLOGIES: ${{ inputs.technologies }}
         run: |
           python3 - <<'PY'
           import json, os, pathlib, re
@@ -36,8 +45,19 @@ jobs:
           targets = list(dict.fromkeys(os.environ['DESIGNS'].split()))
           if not targets or any(target not in available for target in targets):
               raise SystemExit('Choose valid design.variant targets from flows/targets.mk')
+          technologies = list(dict.fromkeys(os.environ['TECHNOLOGIES'].split()))
+          supported = {'asap7', 'gf180mcu_7t', 'gf180mcu_9t', 'c4m-ihpsg13g2'}
+          if not technologies or any(technology not in supported for technology in technologies):
+              raise SystemExit('Choose supported synthesis technologies: ' + ' '.join(sorted(supported)))
+          for target in targets:
+              family, variant = target.split('.')
+              for technology in technologies:
+                  flow = pathlib.Path('flows') / family / 'variants' / variant / technology / 'yosys.tcl'
+                  if not flow.is_file():
+                      raise SystemExit(f'{target} does not support {technology}')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write('targets=' + json.dumps(targets) + '\n')
+              output.write('technologies=' + json.dumps(technologies) + '\n')
           PY
   synthesize:
     needs: select
@@ -49,10 +69,12 @@ jobs:
       fail-fast: false
       matrix:
         target: ${{ fromJSON(needs.select.outputs.targets) }}
+        technology: ${{ fromJSON(needs.select.outputs.technologies) }}
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       TARGET: ${{ matrix.target }}
+      TECHNOLOGY: ${{ matrix.technology }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -71,19 +93,63 @@ jobs:
           tar -xzf "$archive" -C "$RUNNER_TEMP"
           printf '%s\n' "$RUNNER_TEMP/oss-cad-suite/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/oss-cad-suite/bin/yosys" -V
-      - name: Prepare pinned ASAP7 libraries
+      - name: Select pinned library
+        id: library
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends p7zip-full
-          technology=benchmarks/technologies/asap7/technology
-          git init "$technology"
-          git -C "$technology" remote add origin https://github.com/The-OpenROAD-Project/asap7sc7p5t_28.git
-          git -C "$technology" sparse-checkout init --cone
-          git -C "$technology" sparse-checkout set LIB/NLDM
-          git -C "$technology" fetch --depth 1 origin e5bd25da72cd297b8c0ec6f77600e0cbaa1124d0
-          git -C "$technology" checkout --detach FETCH_HEAD
-          for archive in "$technology"/LIB/NLDM/asap7sc7p5t_*_RVT_TT_nldm_*.lib.7z; do
-            7z e -y -o"$technology/LIB/NLDM" "$archive"
-          done
+          case "$TECHNOLOGY" in
+            asap7)
+              repository=https://github.com/The-OpenROAD-Project/asap7sc7p5t_28.git
+              revision=e5bd25da72cd297b8c0ec6f77600e0cbaa1124d0
+              ;;
+            gf180mcu_7t)
+              repository=https://github.com/google/globalfoundries-pdk-libs-gf180mcu_fd_sc_mcu7t5v0.git
+              revision=43beb45e4d323a76239de436db2df6732e9a689b
+              ;;
+            gf180mcu_9t)
+              repository=https://github.com/google/globalfoundries-pdk-libs-gf180mcu_fd_sc_mcu9t5v0.git
+              revision=3781fd2951da6e3dc4600e52d997398a9463caeb
+              ;;
+            c4m-ihpsg13g2)
+              repository=https://github.com/lip6/coriolis-pdk-ihpsg13g2-c4m.git
+              revision=d5d6f48e2a577cb8f44ae197cb659742bf77a565
+              ;;
+            *) printf 'Unknown technology: %s\n' "$TECHNOLOGY" >&2; exit 2 ;;
+          esac
+          printf 'repository=%s\nrevision=%s\n' "$repository" "$revision" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: benchmarks/technologies/${{ matrix.technology }}/technology
+          key: yosys-library-${{ runner.os }}-${{ matrix.technology }}-${{ steps.library.outputs.revision }}
+      - name: Prepare pinned libraries
+        env:
+          LIBRARY_REPOSITORY: ${{ steps.library.outputs.repository }}
+          LIBRARY_REVISION: ${{ steps.library.outputs.revision }}
+        run: |
+          technology="benchmarks/technologies/$TECHNOLOGY/technology"
+          if [[ ! -d $technology/.git ]]; then
+            git init "$technology"
+            git -C "$technology" remote add origin "$LIBRARY_REPOSITORY"
+            git -C "$technology" sparse-checkout init --no-cone
+            case "$TECHNOLOGY" in
+              asap7) patterns=(/LIB/NLDM/) ;;
+              gf180mcu_7t|gf180mcu_9t)
+                track=${TECHNOLOGY##*_}
+                prefix="gf180mcu_fd_sc_mcu${track}5v0"
+                patterns=("/liberty/${prefix}__tt_025C_5v00.lib" "/cells/*/${prefix}__*__tt_025C_5v00.lib")
+                ;;
+              c4m-ihpsg13g2) patterns=(/libs.ref/StdCellLib/liberty/) ;;
+            esac
+            git -C "$technology" sparse-checkout set --no-cone -- "${patterns[@]}"
+            git -C "$technology" fetch --depth 1 --filter=blob:none origin "$LIBRARY_REVISION"
+            git -C "$technology" checkout --detach FETCH_HEAD
+          fi
+          [[ $(git -C "$technology" rev-parse HEAD) == "$LIBRARY_REVISION" ]]
+          if [[ $TECHNOLOGY == asap7 ]]; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends p7zip-full
+            for archive in "$technology"/LIB/NLDM/asap7sc7p5t_*_RVT_TT_nldm_*.lib.7z; do
+              7z e -y -o"$technology/LIB/NLDM" "$archive"
+            done
+          fi
       - name: Synthesize designs
-        run: make -C benchmarks yosys DESIGN="$TARGET" TECH=asap7 CHECK=0 INTRA_THREADS="$(nproc)"
+        run: make -C benchmarks yosys DESIGN="$TARGET" TECH="$TECHNOLOGY" CHECK=1 INTRA_THREADS="$(nproc)"
