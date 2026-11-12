@@ -17,7 +17,6 @@ mark_testbench_changes "$host/opentitan"
 "$script_dir/.venv/bin/python" -m pip install --disable-pip-version-check \
   'setuptools==80.9.0' 'setuptools_scm==8.3.1' 'wheel==0.45.1'
 "$script_dir/.venv/bin/python" -m pip install --disable-pip-version-check \
-  --no-cache-dir \
   'fusesoc @ git+https://github.com/lowRISC/fusesoc.git@cf222fa5c9351d09cec13cdaea4602905fa696d0' \
   'edalize @ git+https://github.com/lowRISC/edalize.git@2a70c4421db186b4ec91c770addc89ec83f3818b' \
   'hjson==3.1.0' \

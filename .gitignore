@@ -16,3 +16,4 @@ testbenches/*/tools/build/
 testbenches/*/tools/downloads/
 testbenches/*/tools/install/
 testbenches/*/variants/*/data/
+.cache/pip/
