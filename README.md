@@ -192,6 +192,78 @@ for archive in "$technology"/LIB/NLDM/asap7sc7p5t_*_RVT_TT_nldm_*.lib.7z; do
 done
 ```
 
+
+<details>
+<summary>Set up other technologies</summary>
+
+Currently, `gf180mcu_7t`, `gf180mcu_9t`, and `c4m-ihpsg13g2` flows are also included. As with ASAP7, clone or link the library checkout at `technologies/<technology>/technology/`.
+
+<details>
+<summary>Instructions for gf180mcu_7t</summary>
+
+Link an existing native 7-track library checkout:
+
+```sh
+ln -s /path/to/globalfoundries-pdk-libs-gf180mcu_fd_sc_mcu7t5v0 technologies/gf180mcu_7t/technology
+```
+
+Or clone the library repository:
+
+```sh
+git clone --depth 1 \
+  https://github.com/google/globalfoundries-pdk-libs-gf180mcu_fd_sc_mcu7t5v0.git \
+  technologies/gf180mcu_7t/technology
+```
+
+Setup uses `liberty/gf180mcu_fd_sc_mcu7t5v0__tt_025C_5v00.lib` (TT, 25 °C, 5 V). Select this flow with `TECH=gf180mcu_7t`.
+
+</details>
+
+<details>
+<summary>Instructions for gf180mcu_9t</summary>
+
+Link an existing native 9-track library checkout:
+
+```sh
+ln -s /path/to/globalfoundries-pdk-libs-gf180mcu_fd_sc_mcu9t5v0 technologies/gf180mcu_9t/technology
+```
+
+Or clone the library repository:
+
+```sh
+git clone --depth 1 \
+  https://github.com/google/globalfoundries-pdk-libs-gf180mcu_fd_sc_mcu9t5v0.git \
+  technologies/gf180mcu_9t/technology
+```
+
+Setup uses `liberty/gf180mcu_fd_sc_mcu9t5v0__tt_025C_5v00.lib` (TT, 25 °C, 5 V). Select this flow with `TECH=gf180mcu_9t`.
+
+</details>
+
+<details>
+<summary>Instructions for c4m-ihpsg13g2</summary>
+
+Link an existing packaged C4M/IHP library checkout:
+
+```sh
+ln -s /path/to/coriolis-pdk-ihpsg13g2-c4m technologies/c4m-ihpsg13g2/technology
+```
+
+Or clone the library repository:
+
+```sh
+git clone --depth 1 \
+  https://github.com/lip6/coriolis-pdk-ihpsg13g2-c4m.git \
+  technologies/c4m-ihpsg13g2/technology
+```
+
+Setup uses `libs.ref/StdCellLib/liberty/StdCellLib_nom.lib` (nominal core cells). This flow uses the C4M library rather than upstream IHP's `sg13g2_stdcell` library.
+
+</details>
+
+</details>
+
+
 After installing the technology files and confirming that the design elaborates successfully, run Yosys synthesis with:
 
 ```sh
@@ -208,7 +280,7 @@ The largest variants use hierarchical synthesis to avoid elaborating and mapping
 
 The intermediate `check` calls above report RTL and mapped-design diagnostics without terminating synthesis. Enable the optional final netlist readback check with `make yosys CHECK=1` (default: `CHECK=0`). With this enabled, `check_results` clears the in-memory design, reloads the emitted netlists, and performs strict structural validation. Missing modules, port-width resizing, structural errors, and unmapped cells cause the Make target to fail. Note that enabling this check may substantially increase peak RAM usage compared with synthesis alone.
 
-Synthesis outputs are written under `<design>/variants/<variant>/<technology>/`: netlists in `results/yosys/`, per-stage statistics in `reports/yosys/synthesis.rpt`, and the log in `logs/yosys.log`. With `CHECK=1`, the flow checks hierarchy consistency and writes statistics to `reports/yosys/linked.rpt`. Existing result and report directories and the log are backed up with timestamps before each run.
+Synthesis outputs are written under `<design>/variants/<variant>/<technology>/`: Verilog (`.v`) and BLIF (`.blif`) netlists in `results/yosys/` (set `BLIF=0` to disable BLIF output), per-stage statistics in `reports/yosys/synthesis.rpt`, and the log in `logs/yosys.log`. With `CHECK=1`, the flow checks hierarchy consistency and writes statistics to `reports/yosys/linked.rpt`. Existing result and report directories and the log are backed up with timestamps before each run.
 
 
 ## Simulation tools

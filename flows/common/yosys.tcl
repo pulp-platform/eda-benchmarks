@@ -92,6 +92,9 @@ proc write_results {} {
     set results_dir $::env(BENCH_RESULTS_DIR)
 
     yosys write_verilog -noattr "$results_dir/$top.v"
+    if {![info exists ::env(BENCH_BLIF)] || $::env(BENCH_BLIF) eq "1"} {
+        yosys write_blif -top $top "$results_dir/$top.blif"
+    }
 }
 
 proc write_blackboxes {patterns} {

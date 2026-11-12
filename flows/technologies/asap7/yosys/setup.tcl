@@ -1,8 +1,6 @@
 # Copyright (c) 2026 ETH Zurich and University of Bologna.
 # SPDX-License-Identifier: Apache-2.0
 
-# ASAP7 setup for the shared Yosys synthesis flow.
-
 set yosys_dir [file dirname [file normalize [info script]]]
 set technology_dir [file join [file dirname $yosys_dir] technology]
 set liberty_dir [file join $technology_dir LIB NLDM]
