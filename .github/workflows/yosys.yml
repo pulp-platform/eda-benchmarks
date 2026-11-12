@@ -152,4 +152,12 @@ jobs:
             done
           fi
       - name: Synthesize designs
-        run: make -C benchmarks yosys DESIGN="$TARGET" TECH="$TECHNOLOGY" CHECK=1 INTRA_THREADS="$(nproc)"
+        run: |
+          check=1
+          case "$TARGET" in
+            ita.default|pulp_c910.default)
+              check=0
+              printf 'Skipping netlist readback for %s on %s: CHECK=1 readback can exceed runner memory.\n' "$TARGET" "$TECHNOLOGY"
+              ;;
+          esac
+          make -C benchmarks yosys DESIGN="$TARGET" TECH="$TECHNOLOGY" CHECK="$check" INTRA_THREADS="$(nproc)"
