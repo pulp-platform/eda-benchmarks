@@ -5,6 +5,9 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# Share pip downloads and wheels across setup virtual environments.
+export PIP_CACHE_DIR=${PIP_CACHE_DIR:-$root/.cache/pip}
+mkdir -p -- "$PIP_CACHE_DIR"
 output="$root/benchmarks"
 
 if [[ -e $output || -L $output ]]; then

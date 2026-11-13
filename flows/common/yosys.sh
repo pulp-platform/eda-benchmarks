@@ -17,6 +17,12 @@ export BENCH_CHECK=${BENCH_CHECK:-0}
   exit 2
 }
 
+export BENCH_BLIF=${BENCH_BLIF:-1}
+[[ $BENCH_BLIF == 0 || $BENCH_BLIF == 1 ]] || {
+  printf 'BLIF must be 0 or 1\n' >&2
+  exit 2
+}
+
 threads=${BENCH_INTRA_THREADS:-}
 [[ -z $threads || $threads =~ ^[1-9][0-9]*$ ]] || {
   printf 'intra-target threads must be a positive integer: %s\n' "$threads" >&2

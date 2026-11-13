@@ -9,6 +9,7 @@ DESIGN ?=
 INTRA_THREADS ?=
 AST ?= 0
 CHECK ?= 0
+BLIF ?= 1
 VERILATOR_COMMAND ?=
 VERILATOR_MODE ?= all
 ifeq ($(filter $(VERILATOR_MODE),all build run),)
@@ -25,7 +26,7 @@ include testbenches.mk
 target_family = $(word 1,$(subst ., ,$(1)))
 target_variant = $(word 2,$(subst ., ,$(1)))
 target_dir = $(call target_family,$(1))/variants/$(call target_variant,$(1))
-target_tech_dirs = $(wildcard $(call target_dir,$(1))/*/default.sdc)
+target_tech_dirs = $(wildcard $(call target_dir,$(1))/*/yosys.tcl)
 target_techs = $(notdir $(patsubst %/,%,$(dir $(call target_tech_dirs,$(1)))))
 TECHNOLOGIES := $(sort $(foreach target,$(TARGETS),$(call target_techs,$(target))))
 TECH ?=
@@ -49,7 +50,7 @@ help:
 	  '                 [INTRA_THREADS=<count>]' \
 	  '                 [YOSYS_COMMAND=<command>]' \
 	  '  make yosys [DESIGN=<design.variant>] [TECH=<technology>]' \
-	  '             [INTRA_THREADS=<count>] [YOSYS_COMMAND=<command>] [CHECK=1]' \
+	  '             [INTRA_THREADS=<count>] [YOSYS_COMMAND=<command>] [CHECK=1] [BLIF=0]' \
 	  '  make verilator [DESIGN=<design.variant>] [TEST=<test>] [TESTCASE=<testcase>]' \
 	  '                VERILATOR_COMMAND=<path> [-j<count>]' \
 	  '                [TIMEOUT=0] [SEED=1]' \
@@ -134,6 +135,7 @@ yosys-$(1)-$(2):
 	 BENCH_TECH='$(2)' \
 	 BENCH_TOP='$($(1).TOP)' \
 	 BENCH_CHECK='$(CHECK)' \
+	 BENCH_BLIF='$(BLIF)' \
 	 BENCH_INTRA_THREADS='$(INTRA_THREADS)' \
 	 YOSYS_COMMAND='$(YOSYS_COMMAND)' \
 	 ./common/yosys.sh

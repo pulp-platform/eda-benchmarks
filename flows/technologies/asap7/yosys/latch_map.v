@@ -5,7 +5,7 @@ module \$_DLATCH_P_ (
   input  wire D,
   output wire Q
 );
-  DHLx1_ASAP7_75t_R i_latch (.CLK(E), .D(D), .Q(Q));
+  DHLx1_ASAP7_75t_R _TECHMAP_REPLACE_ (.CLK(E), .D(D), .Q(Q));
 endmodule
 
 module \$_DLATCH_N_ (
@@ -13,5 +13,5 @@ module \$_DLATCH_N_ (
   input  wire D,
   output wire Q
 );
-  DLLx1_ASAP7_75t_R i_latch (.CLK(E), .D(D), .Q(Q));
+  DLLx1_ASAP7_75t_R _TECHMAP_REPLACE_ (.CLK(E), .D(D), .Q(Q));
 endmodule
