@@ -9,7 +9,7 @@ source [file join $package_root common yosys.tcl]
 
 read_rtl
 synthesize_rtl
-convert_async_registers
+map_latches
 map_cells
 write_results
 check_results

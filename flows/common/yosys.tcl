@@ -57,13 +57,8 @@ proc synthesize_rtl {} {
     yosys memory_map
     yosys techmap
     yosys opt -noff
-}
-
-proc convert_async_registers {} {
-    yosys select -clear
-    yosys select t:\$_ALDFF_* t:\$_ALDFFE_*
-    yosys async2sync
-    yosys select -clear
+    yosys opt_dff
+    yosys opt_clean
 }
 
 proc map_cells {{report_label ""} {truncate_report true}} {

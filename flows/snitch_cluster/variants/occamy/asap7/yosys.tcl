@@ -14,7 +14,7 @@ puts "\n===== Synthesizing $top ====="
 read_rtl $top
 yosys blackbox N:tc_sram_blackbox\$*
 synthesize_rtl
-convert_async_registers
+map_latches
 map_cells $top true
 write_results
 write_blackboxes [list =N:tc_sram_blackbox\$*]
@@ -27,7 +27,7 @@ puts "\n===== Synthesizing $top ====="
 read_rtl $top [list +define+OSEDA_SNITCH_CLUSTER_PARENT_ONLY]
 yosys blackbox N:tc_sram_blackbox\$*
 synthesize_rtl
-convert_async_registers
+map_latches
 map_cells $top false
 write_results
 check_results

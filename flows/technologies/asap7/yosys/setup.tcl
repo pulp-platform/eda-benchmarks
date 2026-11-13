@@ -26,3 +26,9 @@ foreach liberty_file $tech_cells {
     lappend tech_cell_args -liberty $liberty_file
 }
 set liberty_args $tech_cell_args
+
+proc map_latches {} {
+    global latch_map_file
+
+    yosys techmap -map $latch_map_file
+}

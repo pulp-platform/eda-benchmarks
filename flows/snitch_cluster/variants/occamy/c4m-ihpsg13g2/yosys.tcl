@@ -13,9 +13,7 @@ puts "\n===== Synthesizing $top ====="
 read_rtl $top
 yosys blackbox N:tc_sram_blackbox\$*
 synthesize_rtl
-yosys dfflegalize -cell {$_DFF_PN0_} 01 -cell {$_DFF_P_} 01 -cell {$_SR_NN_} 01 {t:$_ALDFF*} {t:$_DFFSR*} {t:$_SR_*}
-yosys techmap -map $latch_map_file
-yosys techmap
+map_latches
 map_cells $top true
 write_results
 write_blackboxes [list =N:tc_sram_blackbox\$*]
@@ -27,9 +25,7 @@ puts "\n===== Synthesizing $top ====="
 read_rtl $top [list +define+OSEDA_SNITCH_CLUSTER_PARENT_ONLY]
 yosys blackbox N:tc_sram_blackbox\$*
 synthesize_rtl
-yosys dfflegalize -cell {$_DFF_PN0_} 01 -cell {$_DFF_P_} 01 -cell {$_SR_NN_} 01 {t:$_ALDFF*} {t:$_DFFSR*} {t:$_SR_*}
-yosys techmap -map $latch_map_file
-yosys techmap
+map_latches
 map_cells $top false
 write_results
 check_results

@@ -14,8 +14,7 @@ puts "\n===== Synthesizing $top ====="
 read_rtl $top [list -G BootAddr=0]
 yosys blackbox N:tc_sram_blackbox\$*
 synthesize_rtl
-convert_async_registers
-yosys techmap -map $latch_map_file
+map_latches
 map_cells $top true
 write_results
 write_blackboxes [list =N:tc_sram_blackbox\$*]
@@ -33,8 +32,7 @@ foreach {parameter value} {TCDMBaseAddr 0 BootAddr 0 NumCaches 1 NumCoresPerDivs
 }
 yosys blackbox N:tc_sram_blackbox\$*
 synthesize_rtl
-convert_async_registers
-yosys techmap -map $latch_map_file
+map_latches
 map_cells $top false
 write_results
 write_blackboxes [list =N:tc_sram_blackbox\$*]
@@ -52,8 +50,7 @@ foreach parameter {TCDMBaseAddr BootAddr GroupId} {
 }
 yosys blackbox N:tc_sram_blackbox\$*
 synthesize_rtl
-convert_async_registers
-yosys techmap -map $latch_map_file
+map_latches
 map_cells $top false
 write_results
 write_blackboxes [list =N:tc_sram_blackbox\$*]

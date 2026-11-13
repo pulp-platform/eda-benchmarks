@@ -276,7 +276,7 @@ If `TECH` is omitted, the flow runs every technology available for the selected 
 
 For each target, `common/yosys.sh` enters the variant directory and invokes its technology-specific `yosys.tcl`, which uses the shared helpers in `common/yosys.tcl` and any optional `yosys-slang.args`.
 
-The provided synthesis script is minimalistic. It uses `proc -noopt`, then `opt_clean` and `memory_collect` to prepare cells for hierarchy cost estimation, preserves blackbox boundaries, and partially flattens the design using `keep_hierarchy -min_cost 5000` followed by `flatten`. The shared flow then runs `opt -noff -hier`, `check`, `memory_map`, `techmap`, and a follow-up `opt -noff` for every design and synthesis stage. Both optimization passes skip `opt_dff`; register legalization and library mapping still run.
+The provided synthesis script is minimalistic. It uses `proc -noopt`, then `opt_clean` and `memory_collect` to prepare cells for hierarchy cost estimation, preserves blackbox boundaries, and partially flattens the design using `keep_hierarchy -min_cost 5000` followed by `flatten`. The shared flow then runs `opt -noff -hier`, `check`, `memory_map`, `techmap`, and a follow-up `opt -noff` for every design and synthesis stage. Then, it runs a separate `opt_dff` pass followed by `opt_clean`. Each technology defines `map_latches` in its `yosys/setup.tcl` to map latches before flip-flop and combinational cell mapping. Flip-flop legalization is handled internally by `dfflibmap`.
 
 The largest variants use hierarchical synthesis to avoid elaborating and mapping the entire design at once. `mempool.mempool` and `mempool.terapool` synthesize one shared tile implementation, the group interconnect, and the top-level system as separate stages. `snitch_cluster.occamy` similarly synthesizes one implementation shared by all clusters before synthesizing its parent. Each synthesized child becomes a boundary while its parent is processed. With `CHECK=1`, the emitted netlists are reloaded together for the final structural check.
 
@@ -458,7 +458,6 @@ OpenTitan’s verification environment is adapted to the PULP register bus using
 ### Synthesis
 
 - Some target-specific Slang options ignore assertions; Mempool also ignores initial blocks.
-- For `asap7`, every variant except `cvfpu.fp32_fma` uses `async2sync` to convert asynchronous-load registers before cell mapping. This is a workaround for the available library mappings; the synthesized netlists do not preserve asynchronous-load behavior exactly.
 
 ### Design configurations
 
