@@ -18,6 +18,7 @@ if [[ ! -f $cache_stamp || $(cat "$cache_stamp") != "$cache_key" ]]; then
     "$design_dir"/variants/*/data
 fi
 rm -f -- "$cache_stamp"
+rm -rf -- "$design_dir/.venv"
 bash "$design_dir/setup.sh"
 for variant in "$design_dir"/variants/*; do
   for list in "$variant"/verilator/*/cpp_files.txt "$variant"/verilator/*/cpp_include_dirs.txt; do

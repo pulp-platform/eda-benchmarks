@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+export TOOLCHAIN_SOURCE_PATCH="$script_dir/patches/pulp-gcc-no-debugger.patch"
 key_args=()
 if [[ ${1:-} == --key ]]; then
   key_args=(--key)

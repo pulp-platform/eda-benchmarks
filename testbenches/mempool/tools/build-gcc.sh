@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+export TOOLCHAIN_SOURCE_PATCH="$script_dir/../../common/tools/patches/pulp-gcc-no-debugger.patch"
 exec "$script_dir/../../common/tools/build-riscv-gcc.sh" "$@" "${TOOLCHAIN_WORK_DIR:?Pass the toolchain build directory}" \
   https://github.com/pulp-platform/pulp-riscv-gnu-toolchain.git \
   c672266b7199f2d495a72e284af33fc974f42239 \

@@ -1,0 +1,13 @@
+diff --git a/Makefile.in b/Makefile.in
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -212,6 +212,9 @@ stamps/build-binutils-newlib: $(srcdir)/riscv-binutils-gdb
+ 	cd $(notdir $@) && $</configure \
+ 		--target=$(NEWLIB_TUPLE) \
+ 		$(CONFIGURE_HOST) \
++		--disable-gdb \
++		--disable-sim \
++		--disable-readline \
+ 		--prefix=$(INSTALL_DIR) \
+ 		@with_guile@ \
+ 		--disable-werror

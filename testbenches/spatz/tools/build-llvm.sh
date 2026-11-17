@@ -38,6 +38,8 @@ if [[ ! -f $install/.setup-key || $(cat "$install/.setup-key") != "$setup_key" ]
       "$source_dir/llvm/include/llvm/Support/Signals.h"
     sed -i '/^#include <string>$/i #include <cstdint>' \
       "$source_dir/llvm/include/llvm/Support/Signals.h"
+    sed -i '/^#include <cstddef>$/a #include <cstdint>' \
+      "$source_dir/llvm/include/llvm/ADT/SmallVector.h"
     cmake -S "$source_dir/llvm" -B "$build" -G 'Unix Makefiles' \
       -DCMAKE_INSTALL_PREFIX="$install" -DCMAKE_BUILD_TYPE=Release \
       -DLLVM_OPTIMIZED_TABLEGEN=ON -DLLVM_ENABLE_PROJECTS='clang;lld' \

@@ -1,0 +1,21 @@
+--- a/scripts/s19tomem.py
++++ b/scripts/s19tomem.py
+@@ -47,15 +47,10 @@
+         instr_mem[int(rel_imem_addr / 4)]     = wl
+         instr_mem[int(rel_imem_addr / 4) + 1] = wh
+ 
+-s = ""
+-for m in instr_mem:
+-    s += "%08x\n" % m
+ with open(instr_txt, "w") as f:
+-    f.write(s)
++    f.writelines("%08x\n" % m for m in instr_mem)
+ 
+-s = ""
+-for m in data_mem:
+-    s += "%08x\n" % m
+ with open(data_txt, "w") as f:
+-    f.write(s.rstrip('\n'))
++    f.write("%08x" % data_mem[0])
++    f.writelines("\n%08x" % m for m in data_mem[1:])
+ 
