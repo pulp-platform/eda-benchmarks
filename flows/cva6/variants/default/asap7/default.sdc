@@ -50,4 +50,7 @@ set_false_path -from [get_ports {
   time_irq_i
   debug_req_i
 }]
-set_false_path -to [get_ports rvfi_probes_o]
+set rvfi_outputs [get_ports -quiet rvfi_probes_o]
+if {[llength $rvfi_outputs] > 0} {
+  set_false_path -to $rvfi_outputs
+}

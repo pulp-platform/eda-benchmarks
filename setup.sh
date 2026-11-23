@@ -316,9 +316,8 @@ if [[ -n ${selected_families[snitch_cluster]:-} ]]; then
 
   snitch_environment="$root/bender/snitch_cluster/.venv"
   snitch_python="$snitch_environment/bin/python3"
-  if [[ ! -x $snitch_python ]]; then
-    "$python_command" -m venv "$snitch_environment"
-  fi
+  rm -rf -- "$snitch_environment"
+  "$python_command" -m venv "$snitch_environment"
   "$snitch_python" -m pip --version >/dev/null 2>&1 || {
     printf 'Snitch generation requires pip in the Python virtual environment\n' >&2
     exit 1

@@ -9,9 +9,7 @@ source [file join $package_root common yosys.tcl]
 
 read_rtl
 synthesize_rtl
-yosys dfflegalize -cell {$_DFF_PN0_} 01 -cell {$_DFF_P_} 01 -cell {$_SR_NN_} 01 {t:$_ALDFF*} {t:$_DFFSR*} {t:$_SR_*}
-yosys techmap -map $latch_map_file
-yosys techmap
+map_latches
 map_cells
 write_results
 check_results

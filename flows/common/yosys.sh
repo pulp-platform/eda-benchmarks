@@ -23,6 +23,12 @@ export BENCH_BLIF=${BENCH_BLIF:-1}
   exit 2
 }
 
+export BENCH_PRUNE_RVFI=${BENCH_PRUNE_RVFI:-0}
+[[ $BENCH_PRUNE_RVFI == 0 || $BENCH_PRUNE_RVFI == 1 ]] || {
+  printf 'PRUNE_RVFI must be 0 or 1\n' >&2
+  exit 2
+}
+
 threads=${BENCH_INTRA_THREADS:-}
 [[ -z $threads || $threads =~ ^[1-9][0-9]*$ ]] || {
   printf 'intra-target threads must be a positive integer: %s\n' "$threads" >&2
