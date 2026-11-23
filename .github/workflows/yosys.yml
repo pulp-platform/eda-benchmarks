@@ -161,3 +161,9 @@ jobs:
               ;;
           esac
           make -C benchmarks yosys DESIGN="$TARGET" TECH="$TECHNOLOGY" CHECK="$check" INTRA_THREADS="$(nproc)"
+      - name: Synthesize CVA6 without RVFI
+        if: ${{ matrix.target == 'cva6.default' }}
+        run: |
+          make -C benchmarks yosys DESIGN="$TARGET" TECH="$TECHNOLOGY" CHECK=1 PRUNE_RVFI=1 INTRA_THREADS="$(nproc)"
+          netlist="benchmarks/cva6/variants/default/$TECHNOLOGY/results/yosys/cva6.v"
+          yosys -Q -T -p "read_verilog -lib $netlist; select -assert-count 1 =cva6/i:clk_i; select -assert-none =cva6/o:rvfi_probes_o"
